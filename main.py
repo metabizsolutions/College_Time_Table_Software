@@ -76,16 +76,15 @@ class MainApp(QMainWindow):
         morning_btn.setStyleSheet(button_style)
         evening_btn.setStyleSheet(button_style)
 
-        # Set button sizes
+            # Set button sizes
         morning_btn.setFixedSize(300, 60)
         evening_btn.setFixedSize(300, 60)
 
-        # Add a spacer to increase space between the buttons
-        spacer = QSpacerItem(0, 20, QSizePolicy.Minimum, QSizePolicy.Expanding)
+            # Set layout spacing
+        self.layout.setSpacing(3)
 
         # Add buttons and spacer to the layout
         self.layout.addWidget(morning_btn, alignment=Qt.AlignCenter)
-        self.layout.addItem(spacer)  # Spacer between buttons
         self.layout.addWidget(evening_btn, alignment=Qt.AlignCenter)
 
         # Connect buttons to their respective functions
