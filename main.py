@@ -105,7 +105,7 @@ class MainApp(QMainWindow):
 
         # Create a label
         label = QLabel("Developed by: MetaBiz Solution")
-        label.setFont(QFont("Georgia", 24, QFont.Bold))
+        label.setFont(QFont("Georgia", 15, QFont.Bold))
         label.setAlignment(Qt.AlignCenter)
         self.layout.addWidget(label)
 
