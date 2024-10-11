@@ -51,8 +51,8 @@ class MainApp(QMainWindow):
 
     def init_ui(self):
         # Create a label
-        label = QLabel("Create Timetable for:")
-        label.setFont(QFont("Arial", 24, QFont.Bold))
+        label = QLabel("Create Timetable")
+        label.setFont(QFont("Comic Sans MS", 24, QFont.Bold))
         label.setAlignment(Qt.AlignCenter)
         self.layout.addWidget(label)
 
@@ -90,6 +90,12 @@ class MainApp(QMainWindow):
         # Connect buttons to their respective functions
         morning_btn.clicked.connect(self.create_morning_timetable)
         evening_btn.clicked.connect(self.create_evening_timetable)
+
+        # Create a label
+        label = QLabel("Developed by: MetaBiz Solution")
+        label.setFont(QFont("Times New Roman", 24, QFont.Bold))
+        label.setAlignment(Qt.AlignCenter)
+        self.layout.addWidget(label)
 
     def create_morning_timetable(self):
         self.check_and_open_timetable("morning_timetable.db")
