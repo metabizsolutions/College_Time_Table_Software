@@ -11,12 +11,16 @@ class TimetableCreationWindow(QWidget):
         self.setWindowTitle("Create Timetable")
         self.setGeometry(100, 100, 1280, 720)
 
+        # Set background color for the window
+        self.setStyleSheet("background-color: #49bcfc;")  # Set the background color
+
         layout = QVBoxLayout(self)
 
         # Header label
         label = QLabel("Create Timetable")
         label.setFont(QFont("Arial", 24, QFont.Bold))
         label.setAlignment(Qt.AlignCenter)
+        label.setStyleSheet("color: white;")  # Set label text color to white for visibility
         layout.addWidget(label)
 
         # Additional UI components can be added here for timetable creation
@@ -36,6 +40,9 @@ class MainApp(QMainWindow):
         self.setCentralWidget(self.central_widget)
         self.layout = QVBoxLayout(self.central_widget)
 
+        # Set background color
+        self.central_widget.setStyleSheet("background-color: #49bcfc;")
+
         # Add logo in the center
         self.add_logo()
 
@@ -52,7 +59,7 @@ class MainApp(QMainWindow):
     def init_ui(self):
         # Create a label
         label = QLabel("Create Timetable")
-        label.setFont(QFont("Comic Sans MS", 24, QFont.Bold))
+        label.setFont(QFont("Georgia", 24, QFont.Bold))
         label.setAlignment(Qt.AlignCenter)
         self.layout.addWidget(label)
 
@@ -63,7 +70,7 @@ class MainApp(QMainWindow):
         # Set button styles
         button_style = """
             QPushButton {
-                background-color: #007BFF;
+                background-color: #181818;
                 color: white;
                 border-radius: 10px;
                 padding: 10px;  /* Reduced height */
@@ -75,6 +82,11 @@ class MainApp(QMainWindow):
         """
         morning_btn.setStyleSheet(button_style)
         evening_btn.setStyleSheet(button_style)
+
+        # Change the font of the buttons
+        button_font = QFont("Georgia", 16, QFont.Bold)  # Choose the font you want
+        morning_btn.setFont(button_font)
+        evening_btn.setFont(button_font)
 
             # Set button sizes
         morning_btn.setFixedSize(300, 60)
@@ -93,7 +105,7 @@ class MainApp(QMainWindow):
 
         # Create a label
         label = QLabel("Developed by: MetaBiz Solution")
-        label.setFont(QFont("Times New Roman", 24, QFont.Bold))
+        label.setFont(QFont("Georgia", 24, QFont.Bold))
         label.setAlignment(Qt.AlignCenter)
         self.layout.addWidget(label)
 
@@ -112,10 +124,10 @@ class MainApp(QMainWindow):
         
         # Open the timetable creation window
         self.timetable_window = TimetableCreationWindow(db_name)
-        self.timetable_window.show()
+        self.timetable_window.showMaximized()
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = MainApp()
-    window.show()
+    window.showMaximized()
     sys.exit(app.exec_())
