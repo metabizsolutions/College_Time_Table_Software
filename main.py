@@ -1,8 +1,8 @@
 import sys
 import os
-from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget, QLabel, QMessageBox
+from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget, QLabel, QMessageBox, QSpacerItem, QSizePolicy
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QFont
+from PyQt5.QtGui import QFont, QPixmap
 import database  # Assuming this is your database.py file with the create_database function
 
 class TimetableCreationWindow(QWidget):
@@ -36,8 +36,18 @@ class MainApp(QMainWindow):
         self.setCentralWidget(self.central_widget)
         self.layout = QVBoxLayout(self.central_widget)
 
+        # Add logo in the center
+        self.add_logo()
+
         # Styling the window and buttons
         self.init_ui()
+
+    def add_logo(self):
+        logo_label = QLabel()
+        pixmap = QPixmap("logo.png")  # Load the logo image
+        logo_label.setPixmap(pixmap.scaled(300, 150, Qt.KeepAspectRatio))  # Scale the logo
+        logo_label.setAlignment(Qt.AlignCenter)  # Center the logo
+        self.layout.addWidget(logo_label, alignment=Qt.AlignCenter)
 
     def init_ui(self):
         # Create a label
@@ -56,7 +66,7 @@ class MainApp(QMainWindow):
                 background-color: #007BFF;
                 color: white;
                 border-radius: 10px;
-                padding: 15px;
+                padding: 10px;  /* Reduced height */
                 font-size: 18px;
             }
             QPushButton:hover {
@@ -70,8 +80,12 @@ class MainApp(QMainWindow):
         morning_btn.setFixedSize(300, 60)
         evening_btn.setFixedSize(300, 60)
 
-        # Add buttons to the layout
+        # Add a spacer to increase space between the buttons
+        spacer = QSpacerItem(0, 20, QSizePolicy.Minimum, QSizePolicy.Expanding)
+
+        # Add buttons and spacer to the layout
         self.layout.addWidget(morning_btn, alignment=Qt.AlignCenter)
+        self.layout.addItem(spacer)  # Spacer between buttons
         self.layout.addWidget(evening_btn, alignment=Qt.AlignCenter)
 
         # Connect buttons to their respective functions
