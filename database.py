@@ -99,6 +99,5 @@ def create_database(db_name):
     print(f"Database '{db_name}' and tables created successfully!")
 
 if __name__ == "__main__":
-    # Example of creating the Morning and Evening databases
-    create_database("morning_timetable.db")
-    create_database("evening_timetable.db")
+    # Create only one database
+    create_database("timetable.db")
