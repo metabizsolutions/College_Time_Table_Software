@@ -3,7 +3,7 @@ import os
 import sqlite3
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QPushButton, QVBoxLayout,
-    QWidget, QLabel, QMessageBox, QComboBox, QSpacerItem, QSizePolicy
+    QWidget, QLabel, QMessageBox, QComboBox, QHBoxLayout
 )
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont, QPixmap
@@ -44,7 +44,6 @@ class TimetableCreationWindow(QWidget):
         # Add form fields
         self.add_form_fields(layout)
 
-        # Additional UI components can be added here for timetable creation
         self.setLayout(layout)
 
     def add_logo(self, layout):
@@ -63,13 +62,23 @@ class TimetableCreationWindow(QWidget):
         courses = fetch_data_from_database("SELECT course_name, course_code FROM Courses")
         programs = fetch_data_from_database("SELECT program_name, semester FROM Programs")
 
-        # Create and populate the dropdowns
-        self.classroom_combobox = self.create_combobox("Select Classroom", [classroom[0] for classroom in classrooms], layout)
-        self.teacher_combobox = self.create_combobox("Select Teacher", [teacher[0] for teacher in teachers], layout)
-        self.course_combobox = self.create_combobox("Select Course Title", [course[0] for course in courses], layout)
-        self.code_combobox = self.create_combobox("Select Code", [course[1] for course in courses], layout)
-        self.program_combobox = self.create_combobox("Select Program", [program[0] for program in programs], layout)
-        self.semester_combobox = self.create_combobox("Select Semester", [program[1] for program in programs], layout)
+        # Create a horizontal layout for each row of input fields
+        hbox1 = QHBoxLayout()
+        hbox2 = QHBoxLayout()
+        
+        # Create and populate the dropdowns for the first row
+        self.classroom_combobox = self.create_combobox("Select Classroom", [classroom[0] for classroom in classrooms], hbox1)
+        self.teacher_combobox = self.create_combobox("Select Teacher", [teacher[0] for teacher in teachers], hbox1)
+        self.course_combobox = self.create_combobox("Select Course Title", [course[0] for course in courses], hbox1)
+
+        # Create and populate the dropdowns for the second row
+        self.code_combobox = self.create_combobox("Select Code", [course[1] for course in courses], hbox2)
+        self.program_combobox = self.create_combobox("Select Program", [program[0] for program in programs], hbox2)
+        self.semester_combobox = self.create_combobox("Select Semester", [program[1] for program in programs], hbox2)
+
+        # Add both horizontal layouts to the main layout
+        layout.addLayout(hbox1)
+        layout.addLayout(hbox2)
 
     def create_combobox(self, label_text, items, layout):
         """Helper function to create a ComboBox with label and populate items."""
