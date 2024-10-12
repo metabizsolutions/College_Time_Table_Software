@@ -53,7 +53,7 @@ def create_database(db_name):
     conn.commit()
     conn.close()
 
-def fetch_data(query):
+def fetch_query_results(query):
     """Fetch data from the database."""
     conn = sqlite3.connect("timetable.db")  # Ensure correct database is used
     cursor = conn.cursor()
