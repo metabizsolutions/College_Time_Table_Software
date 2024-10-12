@@ -46,6 +46,9 @@ class TimetableCreationWindow(QWidget):
 
         layout.addWidget(generate_btn, alignment=Qt.AlignCenter)  # Align the button using the layout
 
+        # Add new action buttons below "Generate Timetable"
+        self.add_action_buttons(layout)
+
         self.setLayout(layout)
 
     def add_logo(self, layout):
@@ -101,6 +104,57 @@ class TimetableCreationWindow(QWidget):
 
     def fetch_data_from_database(self, query):
         return database.fetch_data(query)  # Make sure this function exists in database.py
+
+    def add_action_buttons(self, layout):
+        button_layout = QVBoxLayout()
+
+        # Create the buttons with the same style and size as "Generate Timetable"
+        overall_btn = QPushButton("Print Overall Timetable")
+        dept_btn = QPushButton("Print Dept Timetable")
+        overload_btn = QPushButton("Print Work Overload")
+
+        # Apply the same style and size as the "Generate Timetable" button
+        for btn in [overall_btn, dept_btn, overload_btn]:
+            btn.setStyleSheet("""
+                QPushButton {
+                    background-color: #181818;
+                    color: white;
+                    border-radius: 10px;
+                    padding: 10px;
+                    font-size: 18px;
+                }
+                QPushButton:hover {
+                    background-color: #0056b3;
+                }
+            """)
+            btn.setFont(QFont("Georgia", 18, QFont.Bold))
+            btn.setFixedSize(300, 60)
+
+        # Add buttons to the layout
+        button_layout.addWidget(overall_btn, alignment=Qt.AlignCenter)
+        button_layout.addWidget(dept_btn, alignment=Qt.AlignCenter)
+        button_layout.addWidget(overload_btn, alignment=Qt.AlignCenter)
+
+        # Add the button layout to the main layout
+        layout.addLayout(button_layout)
+
+        # Connect the buttons to their respective functions (placeholders for now)
+        overall_btn.clicked.connect(self.print_overall_timetable)
+        dept_btn.clicked.connect(self.print_dept_timetable)
+        overload_btn.clicked.connect(self.print_work_overload)
+
+    def print_overall_timetable(self):
+        # Placeholder function for printing overall timetable
+        print("Printing overall timetable")
+
+    def print_dept_timetable(self):
+        # Placeholder function for printing dept timetable
+        print("Printing department timetable")
+
+    def print_work_overload(self):
+        # Placeholder function for printing work overload
+        print("Printing work overload")
+
 
 class MainApp(QMainWindow):
     def __init__(self):
@@ -174,15 +228,21 @@ class MainApp(QMainWindow):
 
     def check_and_open_timetable(self, db_name, timetable_type):
         if not os.path.exists(db_name):
-            database.create_database(db_name)
-            QMessageBox.information(self, "Database Created", f"Database '{db_name}' has been created.")
-        
-        self.timetable_window = TimetableCreationWindow(db_name, timetable_type)
-        self.timetable_window.showMaximized()
+            self.show_error_message("Database not found", "The required database was not found.")
+        else:
+            self.timetable_window = TimetableCreationWindow(db_name, timetable_type)
+            self.timetable_window.show()
+
+    def show_error_message(self, title, message):
+        msg_box = QMessageBox(self)
+        msg_box.setIcon(QMessageBox.Critical)
+        msg_box.setWindowTitle(title)
+        msg_box.setText(message)
+        msg_box.exec_()
 
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    window = MainApp()
-    window.showMaximized()
+    main_window = MainApp()
+    main_window.show()
     sys.exit(app.exec_())
