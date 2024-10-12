@@ -1,159 +1,176 @@
 import sys
-import os
-from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget, QLabel, QMessageBox, QHBoxLayout, QComboBox
+from PyQt5.QtWidgets import (
+    QApplication,
+    QMainWindow,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
+    QLabel,
+    QHBoxLayout,
+    QTableWidget,
+    QTableWidgetItem,
+    QComboBox,
+)
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont, QPixmap
-import database  # Make sure this imports your database functions correctly
+import database  # Ensure this imports your database functions correctly
 
-class TimetableCreationWindow(QWidget):
-    def __init__(self, db_name, timetable_type):
+
+class ViewTimetableWindow(QWidget):
+    def __init__(self):
         super().__init__()
-        self.setWindowTitle(f"Create {timetable_type} Timetable")
-        self.setGeometry(100, 100, 1280, 720)
-        self.setStyleSheet("background-color: #49bcfc;")  # Background color
+        self.setWindowTitle("View Timetable")
+        self.setGeometry(100, 100, 800, 600)
+        self.layout = QVBoxLayout(self)
 
-        layout = QVBoxLayout(self)
+        self.table_widget = QTableWidget(self)
+        self.layout.addWidget(self.table_widget)
 
-        # Add logo in the center
-        self.add_logo(layout)
+        self.load_timetable()
 
-        # Header label
-        label = QLabel(f"Create {timetable_type} Timetable")
-        label.setFont(QFont("Arial", 28, QFont.Bold))  # Increased font size
-        label.setAlignment(Qt.AlignCenter)
-        label.setStyleSheet("color: white;")
-        layout.addWidget(label)
+    def load_timetable(self):
+        timetable_data = database.fetch_data("SELECT * FROM Schedule")  # Assuming you want to view the Schedule table
+        self.populate_table(timetable_data)
 
-        # Add form fields
-        self.add_form_fields(layout)
+    def populate_table(self, data):
+        if data:
+            self.table_widget.setColumnCount(len(data[0]))
+            self.table_widget.setRowCount(len(data))
+            self.table_widget.setHorizontalHeaderLabels(
+                ["ID", "Classroom", "Teacher", "Course", "Program", "Semester"]
+            )  # Adjust according to your Schedule columns
 
-        # Generate Timetable button
-        generate_btn = QPushButton("Generate Timetable")
-        generate_btn.setStyleSheet("""
+            for row_idx, row_data in enumerate(data):
+                for col_idx, col_data in enumerate(row_data):
+                    self.table_widget.setItem(row_idx, col_idx, QTableWidgetItem(str(col_data)))
+
+        self.table_widget.resizeColumnsToContents()
+
+
+class AddDataWindow(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Add New Data")
+        self.setGeometry(100, 100, 400, 300)
+        self.layout = QVBoxLayout(self)
+
+        # Add form fields for adding new data (e.g., classrooms, teachers, etc.)
+        self.classroom_combobox = self.create_combobox("Select Classroom", self.fetch_classrooms())
+        self.teacher_combobox = self.create_combobox("Select Teacher", self.fetch_teachers())
+        self.course_combobox = self.create_combobox("Select Course", self.fetch_courses())
+        self.program_combobox = self.create_combobox("Select Program", self.fetch_programs())
+
+        self.add_button = QPushButton("Add Data")
+        self.add_button.clicked.connect(self.add_data)
+
+        self.layout.addWidget(self.classroom_combobox)
+        self.layout.addWidget(self.teacher_combobox)
+        self.layout.addWidget(self.course_combobox)
+        self.layout.addWidget(self.program_combobox)
+        self.layout.addWidget(self.add_button)
+
+    def create_combobox(self, label_text, items):
+        combobox = QComboBox()
+        combobox.addItems(items)
+        return combobox
+
+    def fetch_classrooms(self):
+        classrooms = database.fetch_data("SELECT classroom_name FROM Classrooms")
+        return [classroom[0] for classroom in classrooms]
+
+    def fetch_teachers(self):
+        teachers = database.fetch_data("SELECT teacher_name FROM Teachers")
+        return [teacher[0] for teacher in teachers]
+
+    def fetch_courses(self):
+        courses = database.fetch_data("SELECT course_name FROM Courses")
+        return [course[0] for course in courses]
+
+    def fetch_programs(self):
+        programs = database.fetch_data("SELECT program_name FROM Programs")
+        return [program[0] for program in programs]
+
+    def add_data(self):
+        # Logic to add data to the database based on the selected values
+        # You can add more logic to insert data into the respective tables
+        pass
+
+
+class UpdateDataWindow(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Update Data")
+        self.setGeometry(100, 100, 800, 600)
+        self.layout = QVBoxLayout(self)
+
+        self.table_widget = QTableWidget(self)
+        self.layout.addWidget(self.table_widget)
+
+        self.load_data()
+
+    def load_data(self):
+        all_data = database.fetch_data("SELECT * FROM Schedule")  # Load data from Schedule table
+        self.populate_table(all_data)
+
+    def populate_table(self, data):
+        if data:
+            self.table_widget.setColumnCount(len(data[0]))
+            self.table_widget.setRowCount(len(data))
+            self.table_widget.setHorizontalHeaderLabels(
+                ["ID", "Classroom", "Teacher", "Course", "Program", "Semester"]
+            )  # Adjust according to your Schedule columns
+
+            for row_idx, row_data in enumerate(data):
+                for col_idx, col_data in enumerate(row_data):
+                    self.table_widget.setItem(row_idx, col_idx, QTableWidgetItem(str(col_data)))
+
+        self.table_widget.resizeColumnsToContents()
+
+
+class TimetableSelectionWindow(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Select Timetable")
+        self.setGeometry(100, 100, 400, 300)
+        self.layout = QVBoxLayout(self)
+
+        self.morning_button = QPushButton("Morning Timetable")
+        self.evening_button = QPushButton("Evening Timetable")
+
+        # Set button styles
+        button_style = """
             QPushButton {
                 background-color: #181818;
                 color: white;
                 border-radius: 10px;
                 padding: 10px;
-                font-size: 18px;  # Button text size
+                font-size: 18px;
             }
             QPushButton:hover {
                 background-color: #0056b3;
             }
-        """)
-        generate_btn.setFont(QFont("Georgia", 18, QFont.Bold))  # Button font size
-        generate_btn.setFixedSize(300, 60)
+        """
+        for button in [self.morning_button, self.evening_button]:
+            button.setStyleSheet(button_style)
+            button.setFont(QFont("Georgia", 18, QFont.Bold))
+            button.setFixedSize(300, 60)
 
-        layout.addWidget(generate_btn, alignment=Qt.AlignCenter)  # Align the button using the layout
+        self.layout.addWidget(self.morning_button)
+        self.layout.addWidget(self.evening_button)
 
-        # Add new action buttons below "Generate Timetable"
-        self.add_action_buttons(layout)
+        self.setLayout(self.layout)
 
-        self.setLayout(layout)
+        # Connect buttons to their functions
+        self.morning_button.clicked.connect(self.create_morning_timetable)
+        self.evening_button.clicked.connect(self.create_evening_timetable)
 
-    def add_logo(self, layout):
-        logo_label = QLabel()
-        pixmap = QPixmap("logo.png")  # Adjust path to your logo
-        logo_label.setPixmap(pixmap.scaled(300, 150, Qt.KeepAspectRatio))
-        logo_label.setAlignment(Qt.AlignCenter)
-        layout.addWidget(logo_label, alignment=Qt.AlignCenter)
+    def create_morning_timetable(self):
+        # Logic to create morning timetable
+        print("Creating morning timetable...")
 
-    def add_form_fields(self, layout):
-        form_layout = QVBoxLayout()
-
-        # Create horizontal layouts for each row of input fields
-        hbox1 = QHBoxLayout()
-        hbox2 = QHBoxLayout()
-
-        # Fetch data from the database
-        classrooms = self.fetch_data_from_database("SELECT classroom_name FROM Classrooms")
-        teachers = self.fetch_data_from_database("SELECT teacher_name FROM Teachers")
-        courses = self.fetch_data_from_database("SELECT course_name, course_code FROM Courses")
-        programs = self.fetch_data_from_database("SELECT program_name, semester FROM Programs")
-
-        # Create and populate the dropdowns for the first row
-        self.classroom_combobox = self.create_combobox("Select Classroom", [classroom[0] for classroom in classrooms], hbox1)
-        self.teacher_combobox = self.create_combobox("Select Teacher", [teacher[0] for teacher in teachers], hbox1)
-        self.course_combobox = self.create_combobox("Select Course Title", [course[0] for course in courses], hbox1)
-
-        # Create and populate the dropdowns for the second row
-        self.code_combobox = self.create_combobox("Select Code", [course[1] for course in courses], hbox2)
-        self.program_combobox = self.create_combobox("Select Program", [program[0] for program in programs], hbox2)
-        self.semester_combobox = self.create_combobox("Select Semester", [program[1] for program in programs], hbox2)
-
-        # Add both horizontal layouts to the form layout
-        form_layout.addLayout(hbox1)
-        form_layout.addLayout(hbox2)
-
-        # Add the form layout to the main layout
-        layout.addLayout(form_layout)
-        layout.setAlignment(form_layout, Qt.AlignCenter)  # Set alignment separately
-
-    def create_combobox(self, label_text, items, layout):
-        label = QLabel(label_text)
-        label.setStyleSheet("color: white;")
-        label.setFont(QFont("Arial", 16))  # Set font size for labels
-
-        combobox = QComboBox()
-        combobox.addItems(items)
-        combobox.setFixedSize(250, 40)  # Set a standard size for the combo boxes
-        layout.addWidget(label)
-        layout.addWidget(combobox)
-
-        return combobox
-
-    def fetch_data_from_database(self, query):
-        return database.fetch_data(query)  # Make sure this function exists in database.py
-
-    def add_action_buttons(self, layout):
-        button_layout = QVBoxLayout()
-
-        # Create the buttons with the same style and size as "Generate Timetable"
-        overall_btn = QPushButton("Print Overall Timetable")
-        dept_btn = QPushButton("Print Dept Timetable")
-        overload_btn = QPushButton("Print Work Overload")
-
-        # Apply the same style and size as the "Generate Timetable" button
-        for btn in [overall_btn, dept_btn, overload_btn]:
-            btn.setStyleSheet("""
-                QPushButton {
-                    background-color: #181818;
-                    color: white;
-                    border-radius: 10px;
-                    padding: 10px;
-                    font-size: 18px;
-                }
-                QPushButton:hover {
-                    background-color: #0056b3;
-                }
-            """)
-            btn.setFont(QFont("Georgia", 18, QFont.Bold))
-            btn.setFixedSize(300, 60)
-
-        # Add buttons to the layout
-        button_layout.addWidget(overall_btn, alignment=Qt.AlignCenter)
-        button_layout.addWidget(dept_btn, alignment=Qt.AlignCenter)
-        button_layout.addWidget(overload_btn, alignment=Qt.AlignCenter)
-
-        # Add the button layout to the main layout
-        layout.addLayout(button_layout)
-
-        # Connect the buttons to their respective functions (placeholders for now)
-        overall_btn.clicked.connect(self.print_overall_timetable)
-        dept_btn.clicked.connect(self.print_dept_timetable)
-        overload_btn.clicked.connect(self.print_work_overload)
-
-    def print_overall_timetable(self):
-        # Placeholder function for printing overall timetable
-        print("Printing overall timetable")
-
-    def print_dept_timetable(self):
-        # Placeholder function for printing dept timetable
-        print("Printing department timetable")
-
-    def print_work_overload(self):
-        # Placeholder function for printing work overload
-        print("Printing work overload")
+    def create_evening_timetable(self):
+        # Logic to create evening timetable
+        print("Creating evening timetable...")
 
 
 class MainApp(QMainWindow):
@@ -180,69 +197,71 @@ class MainApp(QMainWindow):
 
     def init_ui(self):
         label = QLabel("Create Timetable")
-        label.setFont(QFont("Georgia", 28, QFont.Bold))  # Increased font size for main title
+        label.setFont(QFont("Georgia", 28, QFont.Bold))
         label.setAlignment(Qt.AlignCenter)
         self.layout.addWidget(label)
 
-        morning_btn = QPushButton("Morning Classes")
-        evening_btn = QPushButton("Evening Classes")
+        # Main buttons
+        view_btn = QPushButton("View Timetable")
+        add_btn = QPushButton("Add New Data")
+        update_btn = QPushButton("Update Data")
+        create_btn = QPushButton("Create Timetable")
 
         button_style = """
             QPushButton {
                 background-color: #181818;
                 color: white;
                 border-radius: 10px;
-                padding: 10px; 
-                font-size: 18px;  # Button text size
+                padding: 10px;
+                font-size: 18px;
             }
             QPushButton:hover {
                 background-color: #0056b3;
             }
         """
-        morning_btn.setStyleSheet(button_style)
-        evening_btn.setStyleSheet(button_style)
+        for btn in [view_btn, add_btn, update_btn, create_btn]:
+            btn.setStyleSheet(button_style)
+            btn.setFont(QFont("Georgia", 18, QFont.Bold))
+            btn.setFixedSize(300, 60)
 
-        button_font = QFont("Georgia", 18, QFont.Bold)  # Increased button font size
-        morning_btn.setFont(button_font)
-        evening_btn.setFont(button_font)
+        self.layout.addWidget(view_btn, alignment=Qt.AlignCenter)
+        self.layout.addWidget(add_btn, alignment=Qt.AlignCenter)
+        self.layout.addWidget(update_btn, alignment=Qt.AlignCenter)
+        self.layout.addWidget(create_btn, alignment=Qt.AlignCenter)
 
-        morning_btn.setFixedSize(300, 60)
-        evening_btn.setFixedSize(300, 60)
+        view_btn.clicked.connect(self.open_view_timetable)
+        add_btn.clicked.connect(self.open_add_data)
+        update_btn.clicked.connect(self.open_update_data)
+        create_btn.clicked.connect(self.open_create_timetable)
 
-        self.layout.setSpacing(3)
+        # Add footer
+        self.add_footer()
 
-        self.layout.addWidget(morning_btn, alignment=Qt.AlignCenter)
-        self.layout.addWidget(evening_btn, alignment=Qt.AlignCenter)
+    def add_footer(self):
+        footer_label = QLabel("Developed by MetaBiz Solutions")
+        footer_label.setFont(QFont("Georgia", 12, QFont.Bold))
+        footer_label.setAlignment(Qt.AlignCenter)
+        self.layout.addWidget(footer_label, alignment=Qt.AlignCenter)
 
-        morning_btn.clicked.connect(lambda: self.create_timetable("Morning"))
-        evening_btn.clicked.connect(lambda: self.create_timetable("Evening"))
+    def open_view_timetable(self):
+        self.view_window = ViewTimetableWindow()
+        self.view_window.show()
 
-        label = QLabel("Developed by: MetaBiz Solution")
-        label.setFont(QFont("Georgia", 14))  # Set font size for the developer label
-        label.setAlignment(Qt.AlignCenter)
-        self.layout.addWidget(label)
+    def open_add_data(self):
+        self.add_window = AddDataWindow()
+        self.add_window.show()
 
-    def create_timetable(self, timetable_type):
-        db_name = "timetable.db"
-        self.check_and_open_timetable(db_name, timetable_type)
+    def open_update_data(self):
+        self.update_window = UpdateDataWindow()
+        self.update_window.show()
 
-    def check_and_open_timetable(self, db_name, timetable_type):
-        if not os.path.exists(db_name):
-            self.show_error_message("Database not found", "The required database was not found.")
-        else:
-            self.timetable_window = TimetableCreationWindow(db_name, timetable_type)
-            self.timetable_window.show()
-
-    def show_error_message(self, title, message):
-        msg_box = QMessageBox(self)
-        msg_box.setIcon(QMessageBox.Critical)
-        msg_box.setWindowTitle(title)
-        msg_box.setText(message)
-        msg_box.exec_()
+    def open_create_timetable(self):
+        self.timetable_selection_window = TimetableSelectionWindow()
+        self.timetable_selection_window.show()
 
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    main_window = MainApp()
-    main_window.show()
+    main_app = MainApp()
+    main_app.show()
     sys.exit(app.exec_())
