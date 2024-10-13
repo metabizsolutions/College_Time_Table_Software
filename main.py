@@ -1,9 +1,9 @@
+import sys
 from PyQt5 import QtCore, QtGui, QtWidgets
-from AddData import AddDataWindow  # Importing AddDataWindow
-from ViewTimetable import ViewTimetableWindow  # Importing the view timetable window
-from UpdateData import UpdateDataWindow  # Importing the update data window
-from CreateTimetable import CreateTimetableWindow  # Importing the create timetable window
-
+from AddData import AddDataWindow
+from ViewTimetable import ViewTimetableWindow
+from UpdateData import UpdateDataWindow
+from CreateTimetable import CreateTimetableWindow
 class MainApp(QtWidgets.QWidget):
     def __init__(self):
         super().__init__()
