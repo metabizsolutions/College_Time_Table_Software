@@ -24,7 +24,7 @@ class UpdateDataWindow(QWidget):
         self.layout.addWidget(self.btn_update_teachers)
 
         # Connect buttons to their respective functions
-        self.btn_update_classroom.clicked.connect(lambda: self.update_classroom(1))  # Example ID
+        self.btn_update_classroom.clicked.connect(lambda: self.update_classroom())  # Example ID
         self.btn_update_courses.clicked.connect(lambda: self.update_courses(1))  # Example ID
         self.btn_update_program.clicked.connect(lambda: self.update_program(1))  # Example ID
         self.btn_update_teachers.clicked.connect(lambda: self.update_teacher(1))  # Example ID
@@ -39,10 +39,13 @@ class UpdateDataWindow(QWidget):
         # Implement this method to execute queries against the database
         pass
 
-    def update_classroom(self, classroom_id):
+    def update_classroom(self):
         # Fetch the current data from the database
-        query = "SELECT classroom_name FROM Classrooms WHERE classroom_id = ?"
-        result = self.fetch_data(query, (classroom_id,))  # Fetch based on classroom_id
+        #query = "SELECT classroom_name FROM Classrooms WHERE classroom_id = ?"
+        #result = self.fetch_data(query, (classroom_id))  # Fetch based on classroom_id
+
+        query = "SELECT classroom_name FROM Classrooms"
+        result = self.fetch_data(query)  # Fetch based on classroom_id
         
         if result:
             self.classroom_input = QLineEdit(result[0])  # Set the fetched classroom name
@@ -50,7 +53,7 @@ class UpdateDataWindow(QWidget):
 
             self.update_button_classroom = QPushButton("Update Classroom")
             self.layout.addWidget(self.update_button_classroom)
-            self.update_button_classroom.clicked.connect(lambda: self.save_classroom_data(classroom_id))
+            self.update_button_classroom.clicked.connect(lambda: self.save_classroom_data())
         else:
             QMessageBox.warning(self, "Warning", "No data found for the given Classroom ID")
 
