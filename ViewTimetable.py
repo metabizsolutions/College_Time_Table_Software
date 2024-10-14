@@ -9,7 +9,8 @@ class ViewTimetableWindow(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("View Timetable")
-        self.setGeometry(100, 100, 800, 400)
+        self.setGeometry(200, 200, 800, 600)
+        self.showMaximized()
         self.layout = QVBoxLayout(self)
 
         # Create a label for debugging to confirm file connection

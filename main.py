@@ -10,13 +10,15 @@ from PyQt5.QtWidgets import QMainWindow, QLabel, QLineEdit, QPushButton, QVBoxLa
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import QMessageBox
-from PyQt5.QtWidgets import QComboBox, QMessageBox
+from PyQt5.QtWidgets import QComboBox, QMessageBox, QFormLayout, QScrollArea
 import sqlite3
 class MainApp(QtWidgets.QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("College Timetable Management System")
-        self.setGeometry(100, 100, 600, 500)  # Increased height for footer
+        self.setGeometry(200, 200, 800, 600)
+        self.showMaximized() 
+        
 
         # Set sky blue background
         self.setStyleSheet("background-color: skyblue;")
@@ -94,7 +96,7 @@ class MainApp(QtWidgets.QWidget):
     def add_footer(self):
         footer_label = QtWidgets.QLabel("Developed by MetaBiz Solutions", self)
         footer_label.setAlignment(QtCore.Qt.AlignCenter)
-        footer_label.setStyleSheet("font-size: 14px; font-weight: bold; color: white; padding: 10px;")
+        footer_label.setStyleSheet("font-size: 14px; font-weight: bold; color: black; padding: 10px;")
         self.layout.addWidget(footer_label)
 
     def open_add_data_window(self):
@@ -105,13 +107,18 @@ class MainApp(QtWidgets.QWidget):
         # Maximize the window
         self.add_data_window.showMaximized()
 
-        # Create a central widget and grid layout
-        central_widget = QWidget()
-        layout = QGridLayout()
+        # Create a scroll area
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+
+        # Create a container widget to hold the form layout
+        container_widget = QWidget()
+
+        # Create a form layout
+        layout = QFormLayout(container_widget)
 
         # Set modern styles for fonts and buttons
-        font = QFont("Arial", 12)
-        label_font = QFont("Arial", 14, QFont.Bold)
+        label_font = QFont("Tahoma", 14, QFont.Bold)
 
         # Style for input fields
         textbox_style = """
@@ -141,21 +148,32 @@ class MainApp(QtWidgets.QWidget):
         """
 
         # Add Classroom Section
-        self.label_classroom = QLabel("Add Classroom:")
+
+        #Add Classroom label
+        self.label_classroom = QLabel("CLASSROOM")
         self.label_classroom.setFont(label_font)
+        layout.addRow(self.label_classroom)
         self.textbox_classroom = QLineEdit()
         self.textbox_classroom.setStyleSheet(textbox_style)
+        self.textbox_classroom.setPlaceholderText("Add Classroom")
+        self.textbox_classroom.setFixedWidth(300)  # Set fixed width for the textbox
         self.btn_add_classroom = QPushButton("Add Classroom")
         self.btn_add_classroom.setStyleSheet(button_style)
+        self.btn_add_classroom.setFixedWidth(300)  # Set fixed width for the button
         self.btn_add_classroom.clicked.connect(self.add_classroom)
-        self.textbox_classroom.setPlaceholderText("Add Classroom")
+        layout.addRow(self.textbox_classroom)
+        layout.addRow("", self.btn_add_classroom)
+        # Center align specific rows
+        layout.setAlignment(self.label_classroom, Qt.AlignCenter)
+        layout.setAlignment(self.textbox_classroom, Qt.AlignCenter)
+        layout.setAlignment(self.btn_add_classroom, Qt.AlignCenter)
 
-        layout.addWidget(self.label_classroom, 0, 0)
-        layout.addWidget(self.textbox_classroom, 0, 1)
-        layout.addWidget(self.btn_add_classroom, 0, 2, alignment=Qt.AlignLeft)  # Align left
+
+
 
         # Add Course Section
-        self.label_course = QLabel("Add Course:")
+
+        self.label_course = QLabel("COURSE")
         self.label_course.setFont(label_font)
         self.textbox_course_name = QLineEdit()
         self.textbox_course_code = QLineEdit()
@@ -166,55 +184,90 @@ class MainApp(QtWidgets.QWidget):
         self.textbox_course_name.setStyleSheet(textbox_style)
         self.textbox_course_code.setStyleSheet(textbox_style)
         self.textbox_course_credits.setStyleSheet(textbox_style)
+        self.textbox_course_name.setFixedWidth(300)
+        self.textbox_course_code.setFixedWidth(300)
+        self.textbox_course_credits.setFixedWidth(300)
         self.btn_add_course = QPushButton("Add Course")
         self.btn_add_course.setStyleSheet(button_style)
+        self.btn_add_course.setFixedWidth(300)
         self.btn_add_course.clicked.connect(self.add_course)
 
-        layout.addWidget(self.label_course, 1, 0)
-        layout.addWidget(self.textbox_course_name, 1, 1)
-        layout.addWidget(self.textbox_course_code, 1, 2)
-        layout.addWidget(self.textbox_course_credits, 1, 3)
-        layout.addWidget(self.btn_add_course, 1, 4, alignment=Qt.AlignLeft)  # Align left
+        layout.addRow(self.label_course)
+        layout.addRow(self.textbox_course_name)
+        layout.addRow(self.textbox_course_code)
+        layout.addRow(self.textbox_course_credits)
+        layout.addRow("", self.btn_add_course)
+
+        layout.setAlignment(self.label_course, Qt.AlignCenter)
+        layout.setAlignment(self.textbox_course_name, Qt.AlignCenter)
+        layout.setAlignment(self.textbox_course_code, Qt.AlignCenter)
+        layout.setAlignment(self.textbox_course_credits, Qt.AlignCenter)
+        layout.setAlignment(self.btn_add_course, Qt.AlignCenter)
+
+
+
 
         # Add Day Section
-        self.label_day = QLabel("Add Day:")
-        self.label_day.setFont(label_font)
 
-        # Replace textbox_day with a combobox for selecting days
+        self.label_day = QLabel("DAY")
+        self.label_day.setFont(label_font)
         self.combobox_day = QComboBox()
         self.combobox_day.setStyleSheet(textbox_style)
         self.combobox_day.addItems(["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"])
-
+        self.combobox_day.setFixedWidth(300)
         self.btn_add_day = QPushButton("Add Day")
         self.btn_add_day.setStyleSheet(button_style)
+        self.btn_add_day.setFixedWidth(300)
         self.btn_add_day.clicked.connect(self.add_day)
 
-        # Add widgets to the layout (grid)
-        layout.addWidget(self.label_day, 2, 0)
-        layout.addWidget(self.combobox_day, 2, 1)  # Use combobox instead of textbox
-        layout.addWidget(self.btn_add_day, 2, 2, alignment=Qt.AlignLeft)  # Align left
+        layout.addRow(self.label_day)
+        layout.addRow( self.combobox_day)
+        layout.addRow("", self.btn_add_day)
+
+        layout.setAlignment(self.label_day, Qt.AlignCenter)
+        layout.setAlignment(Qt.AlignCenter)
+        layout.setAlignment(self.combobox_day, Qt.AlignCenter)
+        layout.setAlignment(self.btn_add_day, Qt.AlignCenter)
+
+
+
 
 
         # Add Program Section
-        self.label_program = QLabel("Add Program:")
-        self.label_program.setFont(label_font)
+
+        self.label_classroom_program = QLabel("PROGRAM")
+        self.label_classroom_program.setFont(label_font)
         self.textbox_program_name = QLineEdit()
         self.textbox_program_semester = QLineEdit()
         self.textbox_program_name.setPlaceholderText("Program Name")
         self.textbox_program_semester.setPlaceholderText("Semester")
         self.textbox_program_name.setStyleSheet(textbox_style)
         self.textbox_program_semester.setStyleSheet(textbox_style)
+        self.textbox_program_name.setFixedWidth(300)
+        self.textbox_program_semester.setFixedWidth(300)
         self.btn_add_program = QPushButton("Add Program")
         self.btn_add_program.setStyleSheet(button_style)
+        self.btn_add_program.setFixedWidth(300)
         self.btn_add_program.clicked.connect(self.add_program)
 
-        layout.addWidget(self.label_program, 3, 0)
-        layout.addWidget(self.textbox_program_name, 3, 1)
-        layout.addWidget(self.textbox_program_semester, 3, 2)
-        layout.addWidget(self.btn_add_program, 3, 3, alignment=Qt.AlignLeft)  # Align left
+
+        layout.addRow(self.label_classroom_program)
+        layout.addRow(self.textbox_program_name)
+        layout.addRow(self.textbox_program_semester)
+        layout.addRow("", self.btn_add_program)
+
+        layout.setAlignment(self.label_classroom_program, Qt.AlignCenter)
+        layout.setAlignment(self.textbox_program_name, Qt.AlignCenter)
+        layout.setAlignment(self.textbox_program_semester, Qt.AlignCenter)
+        layout.setAlignment(self.btn_add_program, Qt.AlignCenter)
+
+
+
+
 
         # Add Teacher Section
-        self.label_teacher = QLabel("Add Teacher:")
+
+        self.label_teacher = QLabel("TEACHER")
         self.label_teacher.setFont(label_font)
         self.textbox_teacher_name = QLineEdit()
         self.textbox_teacher_bps = QLineEdit()
@@ -225,20 +278,42 @@ class MainApp(QtWidgets.QWidget):
         self.textbox_teacher_name.setStyleSheet(textbox_style)
         self.textbox_teacher_bps.setStyleSheet(textbox_style)
         self.textbox_teacher_specialization.setStyleSheet(textbox_style)
+        self.textbox_teacher_name.setFixedWidth(300)
+        self.textbox_teacher_bps.setFixedWidth(300)
+        self.textbox_teacher_specialization.setFixedWidth(300)
         self.btn_add_teacher = QPushButton("Add Teacher")
         self.btn_add_teacher.setStyleSheet(button_style)
+        self.btn_add_teacher.setFixedWidth(300)
         self.btn_add_teacher.clicked.connect(self.add_teacher)
 
-        layout.addWidget(self.label_teacher, 4, 0)
-        layout.addWidget(self.textbox_teacher_name, 4, 1)
-        layout.addWidget(self.textbox_teacher_bps, 4, 2)
-        layout.addWidget(self.textbox_teacher_specialization, 4, 3)
-        layout.addWidget(self.btn_add_teacher, 4, 4, alignment=Qt.AlignLeft)  # Align left
+        layout.addRow(self.label_teacher)
+        layout.addRow(self.textbox_teacher_name)
+        layout.addRow(self.textbox_teacher_bps)
+        layout.addRow(self.textbox_teacher_specialization)
+        layout.addRow("", self.btn_add_teacher)
 
-        # Set the central widget and layout
-        central_widget.setLayout(layout)
-        self.add_data_window.setCentralWidget(central_widget)
+        layout.setAlignment(self.label_teacher, Qt.AlignCenter)
+        layout.setAlignment(self.textbox_teacher_name, Qt.AlignCenter)
+        layout.setAlignment(self.textbox_teacher_bps, Qt.AlignCenter)
+        layout.setAlignment(self.textbox_teacher_specialization, Qt.AlignCenter)
+        layout.setAlignment(self.btn_add_teacher, Qt.AlignCenter)
+
+
+
+        # Add the form layout to the container widget
+        container_widget.setLayout(layout)
+
+        # Add the container widget to the scroll area
+        scroll_area.setWidget(container_widget)
+
+        # Set the scroll area as the central widget of the window
+        self.add_data_window.setCentralWidget(scroll_area)
+
         self.add_data_window.show()
+
+
+
+
 
         # These methods will be connected to the buttons
     def add_classroom(self):
@@ -413,4 +488,5 @@ class MainApp(QtWidgets.QWidget):
 if __name__ == "__main__":
     app = QtWidgets.QApplication([])
     main_app = MainApp()
+    main_app.show()
     app.exec_()
