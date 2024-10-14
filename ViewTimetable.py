@@ -3,7 +3,8 @@ import sqlite3
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QTableWidget, 
                              QTableWidgetItem, QPushButton, 
                              QLabel, QMessageBox, QApplication, 
-                             QFormLayout, QLineEdit)
+                             QFormLayout, QLineEdit, QHeaderView)
+from PyQt5.QtCore import pyqtSignal
 
 def fetch_query_results(query):
     """Fetch results from the database based on the given query."""
@@ -33,6 +34,7 @@ class ViewTimetableWindow(QWidget):
         self.setWindowTitle("View Timetable")
         self.setGeometry(200, 200, 800, 600)
         self.layout = QVBoxLayout(self)
+        self.showMaximized()
 
         # Create a label for debugging to confirm file connection
         self.debug_label = QLabel("Loading timetable data...", self)
@@ -41,6 +43,8 @@ class ViewTimetableWindow(QWidget):
         # Create the table widget to display the timetable
         self.table_widget = QTableWidget(self)
         self.layout.addWidget(self.table_widget)
+        self.table_widget.horizontalHeader().setStretchLastSection(True)
+        self.table_widget.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
 
         # Load the timetable data from the database
         self.load_timetable_data()
@@ -58,7 +62,7 @@ class ViewTimetableWindow(QWidget):
                 self.table_widget.setRowCount(len(results))
                 self.table_widget.setColumnCount(len(results[0]) + 2)  # Adding space for buttons
 
-                # Set table headers (adjust according to your table's columns)
+                # Set table headers
                 self.table_widget.setHorizontalHeaderLabels(['Lecture No', 'Department', 'Semester', 'Teacher', 
                                                               'Course Title', 'Course Code', 'Classroom', 
                                                               'Time', 'Session', 'Update', 'Delete'])
@@ -88,7 +92,8 @@ class ViewTimetableWindow(QWidget):
 
     def open_update_window(self, record_id, row_data):
         """Open the update window for the selected record."""
-        self.update_window = UpdateTimetableWindow(record_id, row_data, self)
+        self.update_window = UpdateTimetableWindow(record_id, row_data)  # No parent passed
+        self.update_window.update_successful.connect(self.load_timetable_data)  # Connect signal to slot
         self.update_window.show()
 
     def delete_record(self, record_id):
@@ -100,6 +105,8 @@ class ViewTimetableWindow(QWidget):
             self.load_timetable_data()  # Reload the data to reflect changes
 
 class UpdateTimetableWindow(QWidget):
+        # Define a custom signal
+    update_successful = pyqtSignal()
     def __init__(self, record_id, row_data, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Update Timetable Record")
@@ -107,6 +114,7 @@ class UpdateTimetableWindow(QWidget):
 
         self.record_id = record_id  # ID of the record to update
         self.row_data = row_data  # Current data of the record
+        self.parent = parent  # Store reference to the parent window
 
         self.layout = QFormLayout(self)
 
@@ -145,13 +153,13 @@ class UpdateTimetableWindow(QWidget):
 
         # Create Update button
         self.update_button = QPushButton("Update", self)
-        self.update_button.clicked.connect(self.update_record)  # No parameters are passed here
+        self.update_button.clicked.connect(self.update_record)  # Connect the button to the update function
         self.layout.addRow(self.update_button)
 
         self.setLayout(self.layout)
 
     def update_record(self):
-        """Update the record in the timetable with the new values."""
+        """Update the record in the database with the input values."""
         updated_data = (
             self.department_input.text(),
             self.semester_input.text(),
@@ -165,14 +173,15 @@ class UpdateTimetableWindow(QWidget):
 
         # Call the update_record function from the database
         update_record("timetable", self.record_id, updated_data)
-
+        # Emit the update_successful signal
+        self.update_successful.emit()
         QMessageBox.information(self, "Success", "Record updated successfully!")
+        if self.parent:
+            self.parent.load_timetable_data()  # Refresh the table in the parent window
         self.close()  # Close the update window
 
-        # Notify the parent to refresh data
-        if self.parent():
-            self.parent().load_timetable_data()
 
+        
 def update_record(table_name, record_id, updated_data):
     """Update a record in the specified table."""
     query = f"""UPDATE {table_name} 
@@ -198,8 +207,6 @@ def update_record(table_name, record_id, updated_data):
         print(f"Error updating record: {e}")  # Print any errors that occur
     finally:
         connection.close()
-
-
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
