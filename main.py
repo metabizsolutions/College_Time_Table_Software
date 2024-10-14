@@ -148,6 +148,7 @@ class MainApp(QtWidgets.QWidget):
         self.btn_add_classroom = QPushButton("Add Classroom")
         self.btn_add_classroom.setStyleSheet(button_style)
         self.btn_add_classroom.clicked.connect(self.add_classroom)
+        self.textbox_classroom.setPlaceholderText("Add Classroom")
 
         layout.addWidget(self.label_classroom, 0, 0)
         layout.addWidget(self.textbox_classroom, 0, 1)
@@ -263,6 +264,7 @@ class MainApp(QtWidgets.QWidget):
         msg.setWindowTitle("Success")
         msg.exec_()
         print(f"Classroom Added: {classroom_name}")
+        self.textbox_classroom.setText("")
 
 
     def add_course(self):
@@ -283,6 +285,7 @@ class MainApp(QtWidgets.QWidget):
         # Commit the changes and close the connection
         connection.commit()
         connection.close()
+    
 
         # Display success message
         msg = QMessageBox()
