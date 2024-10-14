@@ -1,16 +1,37 @@
 import sys
+import sqlite3
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QTableWidget, 
                              QTableWidgetItem, QPushButton, 
                              QLabel, QMessageBox, QApplication, 
-                             QFormLayout, QLineEdit)  # Added QFormLayout and QLineEdit imports
-from database import fetch_query_results, delete_record, update_record  # Importing necessary functions from the database module
+                             QFormLayout, QLineEdit)
+
+def fetch_query_results(query):
+    """Fetch results from the database based on the given query."""
+    connection = sqlite3.connect('timetable.db')  # Update with your database file
+    cursor = connection.cursor()
+    
+    cursor.execute(query)
+    results = cursor.fetchall()
+    
+    connection.close()
+    return results
+
+def delete_record(record_id, table_name):
+    """Delete a record from the specified table."""
+    connection = sqlite3.connect('timetable.db')  # Update with your database file
+    cursor = connection.cursor()
+    
+    query = f"DELETE FROM {table_name} WHERE ID = ?"
+    cursor.execute(query, (record_id,))
+    
+    connection.commit()
+    connection.close()
 
 class ViewTimetableWindow(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("View Timetable")
         self.setGeometry(200, 200, 800, 600)
-        self.showMaximized()
         self.layout = QVBoxLayout(self)
 
         # Create a label for debugging to confirm file connection
@@ -25,14 +46,15 @@ class ViewTimetableWindow(QWidget):
         self.load_timetable_data()
 
     def load_timetable_data(self):
+        """Load timetable data from the database and populate the table widget."""
         try:
-            query = "SELECT * FROM Timetable"  # Modify this query according to your timetable table structure
+            query = "SELECT * FROM timetable"  # Modify this query according to your timetable table structure
             results = fetch_query_results(query)
 
             if results:
                 self.debug_label.setText("Timetable data loaded successfully!")
 
-                # Assuming `results` is a list of tuples, set up the table
+                # Set up the table widget
                 self.table_widget.setRowCount(len(results))
                 self.table_widget.setColumnCount(len(results[0]) + 2)  # Adding space for buttons
 
@@ -74,7 +96,7 @@ class ViewTimetableWindow(QWidget):
         reply = QMessageBox.question(self, 'Delete Confirmation', f"Are you sure you want to delete record ID {record_id}?",
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         if reply == QMessageBox.Yes:
-            delete_record(record_id, "Timetable")
+            delete_record(record_id, "timetable")
             self.load_timetable_data()  # Reload the data to reflect changes
 
 class UpdateTimetableWindow(QWidget):
@@ -123,7 +145,7 @@ class UpdateTimetableWindow(QWidget):
 
         # Create Update button
         self.update_button = QPushButton("Update", self)
-        self.update_button.clicked.connect(self.update_record)
+        self.update_button.clicked.connect(self.update_record)  # No parameters are passed here
         self.layout.addRow(self.update_button)
 
         self.setLayout(self.layout)
@@ -142,13 +164,45 @@ class UpdateTimetableWindow(QWidget):
         )
 
         # Call the update_record function from the database
-        update_record("Timetable", self.record_id, updated_data)
+        update_record("timetable", self.record_id, updated_data)
 
         QMessageBox.information(self, "Success", "Record updated successfully!")
         self.close()  # Close the update window
 
+        # Notify the parent to refresh data
+        if self.parent():
+            self.parent().load_timetable_data()
+
+def update_record(table_name, record_id, updated_data):
+    """Update a record in the specified table."""
+    query = f"""UPDATE {table_name} 
+                 SET department = ?,           
+                     semester = ?, 
+                     teacher = ?, 
+                     course_title = ?,        
+                     course_code = ?, 
+                     classroom = ?, 
+                     time = ?, 
+                     session = ? 
+                 WHERE ID = ?"""
+    
+    connection = sqlite3.connect('timetable.db')  # Ensure this path is correct
+    cursor = connection.cursor()
+
+    try:
+        print(f"Updating record ID: {record_id} with data: {updated_data}")  # Debug print
+        cursor.execute(query, (*updated_data, record_id))  # Pass the updated data along with the record ID
+        connection.commit()
+        print(f"Record ID {record_id} updated successfully.")  # Debug print
+    except Exception as e:
+        print(f"Error updating record: {e}")  # Print any errors that occur
+    finally:
+        connection.close()
+
+
+
 if __name__ == "__main__":
-    app = QApplication(sys.argv)  # Ensure QApplication is imported
+    app = QApplication(sys.argv)
     window = ViewTimetableWindow()
     window.show()
     sys.exit(app.exec_())
