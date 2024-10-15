@@ -13,6 +13,7 @@ class CreateTimetableWindow(QWidget):
         self.setWindowTitle("Create Timetable")
         self.setGeometry(100, 100, 400, 500)
         self.layout = QVBoxLayout(self)
+        self.showMaximized()
 
         # Connect to the database
         self.conn = sqlite3.connect('timetable.db')
