@@ -213,5 +213,6 @@ class CreateTimetableWindow(QWidget):
 if __name__ == "__main__":
     app = QApplication([])
     window = CreateTimetableWindow()
-    window.show()
+    window.showMaximized()
+    
     sys.exit(app.exec_())
