@@ -1,148 +1,133 @@
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QLineEdit, QPushButton, QMessageBox
+import sys
+from PyQt5.QtWidgets import (QWidget, QListWidget, QListWidgetItem, QMessageBox, QInputDialog, QApplication, QLineEdit, QVBoxLayout, QMenu)
+from PyQt5.QtCore import Qt
+from database import fetch_query_results, execute_query  # Import your database functions
+
 
 class UpdateDataWindow(QWidget):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Update Data")
-        self.setGeometry(100, 100, 400, 300)
-        self.layout = QVBoxLayout(self)
+        self.setWindowTitle("Manage Classrooms")
+        self.setGeometry(100, 100, 600, 400)
 
-        # Label for update section
-        self.label = QLabel("Update Data Here")
-        self.layout.addWidget(self.label)
+        # Main layout that contains the search bar and classroom list
+        self.main_layout = QVBoxLayout(self)
 
-        # Buttons for different update options
-        self.btn_update_classroom = QPushButton("Update Classroom")
-        self.btn_update_courses = QPushButton("Update Courses")
-        self.btn_update_program = QPushButton("Update Programs")
-        self.btn_update_teachers = QPushButton("Update Teachers Data")
+        # Add the search bar
+        self.search_bar = QLineEdit()
+        self.search_bar.setPlaceholderText("Search Classrooms...")
+        self.search_bar.textChanged.connect(self.filter_classrooms)
+        self.main_layout.addWidget(self.search_bar)
 
-        # Add buttons to layout
-        self.layout.addWidget(self.btn_update_classroom)
-        self.layout.addWidget(self.btn_update_courses)
-        self.layout.addWidget(self.btn_update_program)
-        self.layout.addWidget(self.btn_update_teachers)
+        # Create a QListWidget for displaying the classrooms
+        self.classroom_list = QListWidget(self)
+        self.main_layout.addWidget(self.classroom_list)
 
-        # Connect buttons to their respective functions
-        self.btn_update_classroom.clicked.connect(lambda: self.update_classroom())  # Example ID
-        self.btn_update_courses.clicked.connect(lambda: self.update_courses(1))  # Example ID
-        self.btn_update_program.clicked.connect(lambda: self.update_program(1))  # Example ID
-        self.btn_update_teachers.clicked.connect(lambda: self.update_teacher(1))  # Example ID
+        # Set the layout
+        self.setLayout(self.main_layout)
 
-        self.setLayout(self.layout)
+        # Initialize the classroom list
+        self.classroom_labels = []
 
-    def fetch_data(self, query, params):
-        # Implement this method to fetch data from the database
-        pass
+    def filter_classrooms(self):
+        """Fetch classroom names from the database based on the search query."""
+        search_text = self.search_bar.text().lower()
 
-    def execute_query(self, query, params):
-        # Implement this method to execute queries against the database
-        pass
+        # Only proceed if there is a search query
+        if search_text.strip():
+            try:
+                # Query to fetch matching classrooms from the 'Classrooms' table
+                query = "SELECT classroom_id, classroom_name FROM Classrooms WHERE LOWER(classroom_name) LIKE ?"
+                search_pattern = f"%{search_text}%"  # SQL pattern for matching
+                results = fetch_query_results(query, (search_pattern,))  # Fetch filtered results
 
-    def update_classroom(self):
-        # Fetch the current data from the database
-        #query = "SELECT classroom_name FROM Classrooms WHERE classroom_id = ?"
-        #result = self.fetch_data(query, (classroom_id))  # Fetch based on classroom_id
+                # Clear the QListWidget before adding new results
+                self.classroom_list.clear()
 
-        query = "SELECT classroom_name FROM Classrooms"
-        result = self.fetch_data(query)  # Fetch based on classroom_id
-        
-        if result:
-            self.classroom_input = QLineEdit(result[0])  # Set the fetched classroom name
-            self.layout.addWidget(self.classroom_input)
+                if results:
+                    # Iterate over the fetched results and create items for each classroom
+                    for classroom in results:
+                        classroom_id = classroom[0]
+                        classroom_name = classroom[1]
 
-            self.update_button_classroom = QPushButton("Update Classroom")
-            self.layout.addWidget(self.update_button_classroom)
-            self.update_button_classroom.clicked.connect(lambda: self.save_classroom_data())
-        else:
-            QMessageBox.warning(self, "Warning", "No data found for the given Classroom ID")
+                        # Create a list item for each classroom
+                        item = QListWidgetItem(classroom_name)
+                        item.setData(Qt.UserRole, classroom_id)  # Store the classroom ID in the item's data
 
-    def save_classroom_data(self, classroom_id):
-        updated_classroom = self.classroom_input.text()
-        query = "UPDATE Classrooms SET classroom_name = ? WHERE classroom_id = ?"
-        if self.execute_query(query, (updated_classroom, classroom_id)):
-            QMessageBox.information(self, "Success", "Classroom updated successfully!")
+                        # Add the item to the QListWidget
+                        self.classroom_list.addItem(item)
 
-    def update_courses(self, course_id):
-        # Fetch the current data from the database
-        query = "SELECT course_name, course_code, credits FROM Courses WHERE course_id = ?"
-        result = self.fetch_data(query, (course_id,))  # Fetch based on course_id
-        
-        if result:
-            self.course_name_input = QLineEdit(result[0])  # Set fetched course name
-            self.course_code_input = QLineEdit(result[1])  # Set fetched course code
-            self.credits_input = QLineEdit(str(result[2]))  # Set fetched credits
+                    # Connect item double-click to open the context menu
+                    self.classroom_list.itemDoubleClicked.connect(self.on_double_click)
 
-            self.layout.addWidget(self.course_name_input)
-            self.layout.addWidget(self.course_code_input)
-            self.layout.addWidget(self.credits_input)
+                else:
+                    self.classroom_list.addItem("No classrooms found.")  # In case no data is found
 
-            self.update_button_course = QPushButton("Update Course")
-            self.layout.addWidget(self.update_button_course)
-            self.update_button_course.clicked.connect(lambda: self.save_course_data(course_id))
-        else:
-            QMessageBox.warning(self, "Warning", "No data found for the given Course ID")
+            except Exception as e:
+                self.classroom_list.addItem(f"Error fetching classrooms: {e}")  # Display error if any
 
-    def save_course_data(self, course_id):
-        updated_course_name = self.course_name_input.text()
-        updated_course_code = self.course_code_input.text()
-        updated_credits = int(self.credits_input.text())
-        
-        query = "UPDATE Courses SET course_name = ?, course_code = ?, credits = ? WHERE course_id = ?"
-        if self.execute_query(query, (updated_course_name, updated_course_code, updated_credits, course_id)):
-            QMessageBox.information(self, "Success", "Course updated successfully!")
+    def on_double_click(self, item):
+        """Handle double-click event to show the context menu."""
+        self.show_context_menu(item)
 
-    def update_program(self, program_id):
-        # Fetch the current data from the database
-        query = "SELECT program_name, semester FROM Programs WHERE program_id = ?"
-        result = self.fetch_data(query, (program_id,))  # Fetch based on program_id
-        
-        if result:
-            self.program_name_input = QLineEdit(result[0])  # Set fetched program name
-            self.semester_input = QLineEdit(result[1])  # Set fetched semester
+    def show_context_menu(self, item):
+        """Show a context menu with 'Update' and 'Delete' options."""
+        classroom_id = item.data(Qt.UserRole)  # Get the classroom ID from the item's data
 
-            self.layout.addWidget(self.program_name_input)
-            self.layout.addWidget(self.semester_input)
+        menu = QMenu(self)
+        update_action = menu.addAction("Update")
+        delete_action = menu.addAction("Delete")
 
-            self.update_button_program = QPushButton("Update Program")
-            self.layout.addWidget(self.update_button_program)
-            self.update_button_program.clicked.connect(lambda: self.save_program_data(program_id))
-        else:
-            QMessageBox.warning(self, "Warning", "No data found for the given Program ID")
+        action = menu.exec_(self.mapToGlobal(self.classroom_list.viewport().mapFromGlobal(QCursor.pos())))
 
-    def save_program_data(self, program_id):
-        updated_program_name = self.program_name_input.text()
-        updated_semester = self.semester_input.text()
-        
-        query = "UPDATE Programs SET program_name = ?, semester = ? WHERE program_id = ?"
-        if self.execute_query(query, (updated_program_name, updated_semester, program_id)):
-            QMessageBox.information(self, "Success", "Program updated successfully!")
+        if action == update_action:
+            self.update_classroom(item)
+        elif action == delete_action:
+            self.delete_classroom(item)
 
-    def update_teacher(self, teacher_id):
-        # Fetch the current data from the database
-        query = "SELECT teacher_name, bps_grade, specialization FROM Teachers WHERE teacher_id = ?"
-        result = self.fetch_data(query, (teacher_id,))  # Fetch based on teacher_id
-        
-        if result:
-            self.teacher_name_input = QLineEdit(result[0])  # Set fetched teacher name
-            self.bps_grade_input = QLineEdit(result[1])  # Set fetched BPS Grade
-            self.specialization_input = QLineEdit(result[2])  # Set fetched specialization
+    def update_classroom(self, item):
+        """Open a dialog to update the selected classroom."""
+        classroom_id = item.data(Qt.UserRole)  # Get the classroom ID from the item's data
+        current_name = item.text()
 
-            self.layout.addWidget(self.teacher_name_input)
-            self.layout.addWidget(self.bps_grade_input)
-            self.layout.addWidget(self.specialization_input)
+        # Prompt the user to enter a new classroom name
+        new_name, ok = QInputDialog.getText(self, "Update Classroom", "Enter new classroom name:", text=current_name)
 
-            self.update_button_teacher = QPushButton("Update Teacher")
-            self.layout.addWidget(self.update_button_teacher)
-            self.update_button_teacher.clicked.connect(lambda: self.save_teacher_data(teacher_id))
-        else:
-            QMessageBox.warning(self, "Warning", "No data found for the given Teacher ID")
+        if ok and new_name:
+            try:
+                # Update the classroom name in the database
+                update_query = "UPDATE Classrooms SET classroom_name = ? WHERE classroom_id = ?"
+                execute_query(update_query, (new_name, classroom_id))
 
-    def save_teacher_data(self, teacher_id):
-        updated_teacher_name = self.teacher_name_input.text()
-        updated_bps_grade = self.bps_grade_input.text()
-        updated_specialization = self.specialization_input.text()
-        
-        query = "UPDATE Teachers SET teacher_name = ?, bps_grade = ?, specialization = ? WHERE teacher_id = ?"
-        if self.execute_query(query, (updated_teacher_name, updated_bps_grade, updated_specialization, teacher_id)):
-            QMessageBox.information(self, "Success", "Teacher updated successfully!")
+                # Update the list item text to reflect the new name
+                item.setText(new_name)
+                QMessageBox.information(self, "Success", "Classroom updated successfully!")
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Failed to update classroom: {e}")
+
+    def delete_classroom(self, item):
+        """Delete the selected classroom from the database."""
+        classroom_id = item.data(Qt.UserRole)  # Get the classroom ID from the item's data
+        classroom_name = item.text()
+
+        reply = QMessageBox.question(self, 'Delete Confirmation', f"Are you sure you want to delete classroom '{classroom_name}'?",
+                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+
+        if reply == QMessageBox.Yes:
+            try:
+                # Perform the delete operation
+                delete_query = "DELETE FROM Classrooms WHERE classroom_id = ?"
+                execute_query(delete_query, (classroom_id,))
+                QMessageBox.information(self, "Success", "Classroom deleted successfully.")
+
+                # Remove the item from the list
+                self.classroom_list.takeItem(self.classroom_list.row(item))
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Failed to delete classroom: {e}")
+
+
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    window = UpdateDataWindow()
+    window.show()
+    sys.exit(app.exec_())
