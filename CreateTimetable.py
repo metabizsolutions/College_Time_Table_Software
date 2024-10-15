@@ -1,17 +1,10 @@
 import sys
 import sqlite3
 from PyQt5.QtWidgets import (
-    QApplication,
-    QWidget,
-    QVBoxLayout,
-    QLabel,
-    QLineEdit,
-    QPushButton,
-    QMessageBox,
-    QListWidget,
-    QComboBox
+    QApplication, QWidget, QVBoxLayout, QLabel, QLineEdit, QPushButton, 
+    QMessageBox, QListWidget, QComboBox, QTimeEdit
 )
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QTime
 from PyQt5.QtGui import QFont
 
 class CreateTimetableWindow(QWidget):
@@ -30,7 +23,7 @@ class CreateTimetableWindow(QWidget):
 
         # Add Submit button
         self.submit_button = QPushButton("Submit")
-        self.submit_button.clicked.connect(self.submit_data)
+        self.submit_button.clicked.connect(self.submit_data)    
         self.layout.addWidget(self.submit_button)
 
         self.setLayout(self.layout)
@@ -114,13 +107,23 @@ class CreateTimetableWindow(QWidget):
         self.classroom_list.itemClicked.connect(self.select_classroom)
         self.layout.addWidget(self.classroom_list)
 
-        # Time input
-        self.time_label = QLabel("Enter Time")
-        self.time_label.setFont(QFont("Georgia", 14))
-        self.layout.addWidget(self.time_label)
+        # Lecture Start Time input using QTimeEdit
+        self.start_time_label = QLabel("Select Lecture Start Time")
+        self.start_time_label.setFont(QFont("Georgia", 14))
+        self.layout.addWidget(self.start_time_label)
 
-        self.time_input = QLineEdit()
-        self.layout.addWidget(self.time_input)
+        self.start_time_input = QTimeEdit(self)
+        self.start_time_input.setTime(QTime.currentTime())  # Set the current time as default
+        self.layout.addWidget(self.start_time_input)
+
+        # Lecture End Time input using QTimeEdit
+        self.end_time_label = QLabel("Select Lecture End Time")
+        self.end_time_label.setFont(QFont("Georgia", 14))
+        self.layout.addWidget(self.end_time_label)
+
+        self.end_time_input = QTimeEdit(self)
+        self.end_time_input.setTime(QTime.currentTime())  # Set the current time as default
+        self.layout.addWidget(self.end_time_input)
 
         # Session selection (Morning/Evening)
         self.session_label = QLabel("Select Session")
@@ -180,21 +183,22 @@ class CreateTimetableWindow(QWidget):
         course_title = self.course_title_input.text()
         course_code = self.course_code_input.text()
         classroom = self.classroom_input.text()
-        time = self.time_input.text()
+        start_time = self.start_time_input.time().toString('HH:mm')  # Get the selected start time
+        end_time = self.end_time_input.time().toString('HH:mm')  # Get the selected end time
         session = self.session_combo.currentText()
 
         # Validate inputs
-        if not time:
-            QMessageBox.warning(self, "Input Error", "Please enter the lecture time.")
+        if not department or not semester or not teacher or not course_title or not course_code or not classroom:
+            QMessageBox.warning(self, "Input Error", "Please fill in all the fields.")
             return
 
-        # Insert the data into a table (assuming you have a table for storing timetables)
+        # Insert the data into the Timetable table
         try:
             query = """
-            INSERT INTO Timetable (department, semester, teacher, course_title, course_code, classroom, time, session)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO Timetable (department, semester, teacher, course_title, course_code, classroom, lecture_start_time, lecture_end_time, session)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """
-            self.cursor.execute(query, (department, semester, teacher, course_title, course_code, classroom, time, session))
+            self.cursor.execute(query, (department, semester, teacher, course_title, course_code, classroom, start_time, end_time, session))
             self.conn.commit()
 
             QMessageBox.information(self, "Success", "Timetable created successfully!")
@@ -205,7 +209,6 @@ class CreateTimetableWindow(QWidget):
         """Close the database connection when the window is closed."""
         self.conn.close()
         event.accept()
-
 
 if __name__ == "__main__":
     app = QApplication([])

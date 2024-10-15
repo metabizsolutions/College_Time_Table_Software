@@ -52,7 +52,7 @@ class ViewTimetableWindow(QWidget):
     def load_timetable_data(self):
         """Load timetable data from the database and populate the table widget."""
         try:
-            query = "SELECT * FROM timetable"  # Modify this query according to your timetable table structure
+            query = "SELECT * FROM Timetable"  # Updated to match the actual table name
             results = fetch_query_results(query)
 
             if results:
@@ -63,9 +63,9 @@ class ViewTimetableWindow(QWidget):
                 self.table_widget.setColumnCount(len(results[0]) + 2)  # Adding space for buttons
 
                 # Set table headers
-                self.table_widget.setHorizontalHeaderLabels(['Lecture No', 'Department', 'Semester', 'Teacher', 
+                self.table_widget.setHorizontalHeaderLabels(['ID', 'Department', 'Semester', 'Teacher', 
                                                               'Course Title', 'Course Code', 'Classroom', 
-                                                              'Time', 'Session', 'Update', 'Delete'])
+                                                              'Start Time', 'End Time', 'Session', 'Update', 'Delete'])
 
                 # Populate the table with data and buttons
                 for row_index, row_data in enumerate(results):
@@ -84,15 +84,13 @@ class ViewTimetableWindow(QWidget):
 
             else:
                 self.debug_label.setText("No timetable data available.")
-                print("No data found in the timetable.")
 
         except Exception as e:
             self.debug_label.setText(f"Error loading timetable: {e}")
-            print(f"Error loading timetable: {e}")
 
     def open_update_window(self, record_id, row_data):
         """Open the update window for the selected record."""
-        self.update_window = UpdateTimetableWindow(record_id, row_data)  # No parent passed
+        self.update_window = UpdateTimetableWindow(record_id, row_data)  
         self.update_window.update_successful.connect(self.load_timetable_data)  # Connect signal to slot
         self.update_window.show()
 
@@ -101,59 +99,63 @@ class ViewTimetableWindow(QWidget):
         reply = QMessageBox.question(self, 'Delete Confirmation', f"Are you sure you want to delete record ID {record_id}?",
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         if reply == QMessageBox.Yes:
-            delete_record(record_id, "timetable")
+            delete_record(record_id, "Timetable")
             self.load_timetable_data()  # Reload the data to reflect changes
 
 class UpdateTimetableWindow(QWidget):
-        # Define a custom signal
     update_successful = pyqtSignal()
+
     def __init__(self, record_id, row_data, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Update Timetable Record")
         self.setGeometry(150, 150, 400, 300)
 
-        self.record_id = record_id  # ID of the record to update
-        self.row_data = row_data  # Current data of the record
-        self.parent = parent  # Store reference to the parent window
+        self.record_id = record_id  
+        self.row_data = row_data  
+        self.parent = parent  
 
         self.layout = QFormLayout(self)
 
         # Create input fields for each column in the timetable
         self.department_input = QLineEdit(self)
-        self.department_input.setText(row_data[1])  # Assuming the second column is 'Department'
+        self.department_input.setText(row_data[1])  
         self.layout.addRow("Department:", self.department_input)
 
         self.semester_input = QLineEdit(self)
-        self.semester_input.setText(row_data[2])  # Assuming the third column is 'Semester'
+        self.semester_input.setText(row_data[2])  
         self.layout.addRow("Semester:", self.semester_input)
 
         self.teacher_input = QLineEdit(self)
-        self.teacher_input.setText(row_data[3])  # Assuming the fourth column is 'Teacher'
+        self.teacher_input.setText(row_data[3])  
         self.layout.addRow("Teacher:", self.teacher_input)
 
         self.course_title_input = QLineEdit(self)
-        self.course_title_input.setText(row_data[4])  # Assuming the fifth column is 'Course Title'
+        self.course_title_input.setText(row_data[4])  
         self.layout.addRow("Course Title:", self.course_title_input)
 
         self.course_code_input = QLineEdit(self)
-        self.course_code_input.setText(row_data[5])  # Assuming the sixth column is 'Course Code'
+        self.course_code_input.setText(row_data[5])  
         self.layout.addRow("Course Code:", self.course_code_input)
 
         self.classroom_input = QLineEdit(self)
-        self.classroom_input.setText(row_data[6])  # Assuming the seventh column is 'Classroom'
+        self.classroom_input.setText(row_data[6])  
         self.layout.addRow("Classroom:", self.classroom_input)
 
-        self.time_input = QLineEdit(self)
-        self.time_input.setText(row_data[7])  # Assuming the eighth column is 'Time'
-        self.layout.addRow("Time:", self.time_input)
+        self.start_time_input = QLineEdit(self)
+        self.start_time_input.setText(row_data[7])  
+        self.layout.addRow("Start Time:", self.start_time_input)
+
+        self.end_time_input = QLineEdit(self)
+        self.end_time_input.setText(row_data[8])  
+        self.layout.addRow("End Time:", self.end_time_input)
 
         self.session_input = QLineEdit(self)
-        self.session_input.setText(row_data[8])  # Assuming the ninth column is 'Session'
+        self.session_input.setText(row_data[9])  
         self.layout.addRow("Session:", self.session_input)
 
         # Create Update button
         self.update_button = QPushButton("Update", self)
-        self.update_button.clicked.connect(self.update_record)  # Connect the button to the update function
+        self.update_button.clicked.connect(self.update_record)
         self.layout.addRow(self.update_button)
 
         self.setLayout(self.layout)
@@ -167,21 +169,19 @@ class UpdateTimetableWindow(QWidget):
             self.course_title_input.text(),
             self.course_code_input.text(),
             self.classroom_input.text(),
-            self.time_input.text(),
+            self.start_time_input.text(),
+            self.end_time_input.text(),
             self.session_input.text()
         )
 
         # Call the update_record function from the database
-        update_record("timetable", self.record_id, updated_data)
-        # Emit the update_successful signal
+        update_record("Timetable", self.record_id, updated_data)
         self.update_successful.emit()
         QMessageBox.information(self, "Success", "Record updated successfully!")
         if self.parent:
-            self.parent.load_timetable_data()  # Refresh the table in the parent window
-        self.close()  # Close the update window
+            self.parent.load_timetable_data()
+        self.close()
 
-
-        
 def update_record(table_name, record_id, updated_data):
     """Update a record in the specified table."""
     query = f"""UPDATE {table_name} 
@@ -191,24 +191,25 @@ def update_record(table_name, record_id, updated_data):
                      course_title = ?,        
                      course_code = ?, 
                      classroom = ?, 
-                     time = ?, 
+                     lecture_start_time = ?, 
+                     lecture_end_time = ?, 
                      session = ? 
-                 WHERE ID = ?"""
+                 WHERE id = ?"""
     
-    connection = sqlite3.connect('timetable.db')  # Ensure this path is correct
+    connection = sqlite3.connect('timetable.db')
     cursor = connection.cursor()
 
     try:
-        print(f"Updating record ID: {record_id} with data: {updated_data}")  # Debug print
-        cursor.execute(query, (*updated_data, record_id))  # Pass the updated data along with the record ID
+        cursor.execute(query, (*updated_data, record_id))
         connection.commit()
-        print(f"Record ID {record_id} updated successfully.")  # Debug print
     except Exception as e:
-        print(f"Error updating record: {e}")  # Print any errors that occur
+        print(f"Error updating record: {e}")
     finally:
         connection.close()
 
 if __name__ == "__main__":
+
+
     app = QApplication(sys.argv)
     window = ViewTimetableWindow()
     window.show()

@@ -115,7 +115,7 @@ def create_database(db_name):
     )
     """)
 
-    # Create Timetable table
+    # Updated Timetable table creation
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS Timetable (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -125,10 +125,13 @@ def create_database(db_name):
         course_title TEXT,
         course_code TEXT,
         classroom TEXT,
-        time TEXT,
+        lecture_start_time TEXT,  -- New start time column
+        lecture_end_time TEXT,    -- New end time column
         session TEXT
     )
     """)
+
+
     
     conn.commit()
     conn.close()
@@ -149,3 +152,6 @@ def execute_query(query, params=None):
         conn.close()
 
 # Add other necessary functions as needed...
+if __name__ == "__main__":
+    # Call the function to create the database and tables if they don't exist
+    create_database("timetable.db")
