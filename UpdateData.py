@@ -9,7 +9,7 @@ from PyQt5.QtCore import Qt
 import sqlite3
 
 
-class UpdateClassroomWindow(QWidget):
+class UpdateDataWindow(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Update Classrooms")
