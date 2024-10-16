@@ -1,6 +1,6 @@
 import sys
-from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QPushButton, QListWidget,
-                             QLineEdit, QHBoxLayout, QMessageBox, QInputDialog, QApplication, QListWidgetItem)
+from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QPushButton, QListWidget, QTableWidget, QTableWidgetItem,
+                             QLineEdit, QHBoxLayout, QMessageBox, QInputDialog, QApplication)
 from PyQt5.QtCore import Qt
 from database import fetch_query_results, execute_query  # Import your database functions
 
@@ -38,38 +38,49 @@ class UpdateDataWindow(QWidget):
 
         self.main_layout.addWidget(self.search_bar)
 
-        # List widget for displaying results
+        # List widget for displaying classroom results (single column)
         self.result_list = QListWidget()
-        self.main_layout.addWidget(self.result_list)
+
+        # Table widget for displaying teacher and course results (multiple columns)
+        self.result_table = QTableWidget()
+
+        self.main_layout.addWidget(self.result_list)  # Initially add the list for classrooms
+        self.main_layout.addWidget(self.result_table)  # Add the table for teachers and courses
 
         # Set the layout
         self.setLayout(self.main_layout)
 
-        # Initially hide the search bar and result list
+        # Initially hide the search bar, result list, and result table
         self.search_bar.setVisible(False)
         self.result_list.setVisible(False)
+        self.result_table.setVisible(False)
 
     def show_classroom_search(self):
+        # Show list widget for classroom updates
         self.search_bar.setVisible(True)
         self.result_list.setVisible(True)
+        self.result_table.setVisible(False)  # Hide the table
         self.search_bar.clear()
         self.result_list.clear()
         self.result_list.itemClicked.connect(self.classroom_item_clicked)
+        self.fetch_classroom_data()  # Fetch initial classroom data
 
     def show_teacher_search(self):
+        # Show table widget for teacher updates
         self.search_bar.setVisible(True)
-        self.result_list.setVisible(True)
+        self.result_list.setVisible(False)  # Hide the list
+        self.result_table.setVisible(True)
         self.search_bar.clear()
-        self.result_list.clear()
-        self.result_list.itemClicked.connect(self.teacher_item_clicked)
+        self.result_table.clear()
         self.fetch_teacher_data()  # Fetch initial teacher data
 
     def show_courses_search(self):
+        # Show table widget for course updates
         self.search_bar.setVisible(True)
-        self.result_list.setVisible(True)
+        self.result_list.setVisible(False)  # Hide the list
+        self.result_table.setVisible(True)
         self.search_bar.clear()
-        self.result_list.clear()
-        self.result_list.itemClicked.connect(self.course_item_clicked)
+        self.result_table.clear()
         self.fetch_course_data()  # Fetch initial course data
 
     def filter_results(self):
@@ -102,14 +113,20 @@ class UpdateDataWindow(QWidget):
         search_pattern = f"%{search_text}%"
         results = fetch_query_results(query, (search_pattern,))
 
-        self.result_list.clear()
+        # Set up table with 3 columns for teacher data
+        self.result_table.setRowCount(len(results))
+        self.result_table.setColumnCount(3)
+        self.result_table.setHorizontalHeaderLabels(["Teacher Name", "BPS Grade", "Specialization"])
+
         if results:
-            for teacher in results:
-                item = QListWidgetItem(f"{teacher[1]} - {teacher[2]} - {teacher[3]}")  # Display name, grade, specialization
-                item.setData(Qt.UserRole, teacher[0])  # Store teacher ID
-                self.result_list.addItem(item)
+            for row_num, teacher in enumerate(results):
+                self.result_table.setItem(row_num, 0, QTableWidgetItem(teacher[1]))
+                self.result_table.setItem(row_num, 1, QTableWidgetItem(str(teacher[2])))
+                self.result_table.setItem(row_num, 2, QTableWidgetItem(teacher[3]))
+                self.result_table.setRowHeight(row_num, 25)  # Set row height
         else:
-            self.result_list.addItem("No teachers found.")
+            self.result_table.setRowCount(0)
+            QMessageBox.information(self, "No Teachers", "No teachers found.")
 
     def fetch_course_data(self, search_text=""):
         """Fetch course data from the database based on the search query."""
@@ -117,29 +134,25 @@ class UpdateDataWindow(QWidget):
         search_pattern = f"%{search_text}%"
         results = fetch_query_results(query, (search_pattern,))
 
-        self.result_list.clear()
+        # Set up table with 3 columns for course data
+        self.result_table.setRowCount(len(results))
+        self.result_table.setColumnCount(3)
+        self.result_table.setHorizontalHeaderLabels(["Course Name", "Course Code", "Credits"])
+
         if results:
-            for course in results:
-                item = QListWidgetItem(f"{course[1]} - {course[2]} - {course[3]}")  # Display course details
-                item.setData(Qt.UserRole, course[0])  # Store course ID
-                self.result_list.addItem(item)
+            for row_num, course in enumerate(results):
+                self.result_table.setItem(row_num, 0, QTableWidgetItem(course[1]))
+                self.result_table.setItem(row_num, 1, QTableWidgetItem(course[2]))
+                self.result_table.setItem(row_num, 2, QTableWidgetItem(str(course[3])))
+                self.result_table.setRowHeight(row_num, 25)  # Set row height
         else:
-            self.result_list.addItem("No courses found.")
+            self.result_table.setRowCount(0)
+            QMessageBox.information(self, "No Courses", "No courses found.")
 
     def classroom_item_clicked(self, item):
         """Handle classroom item selection."""
         classroom_id = item.data(Qt.UserRole)
         self.update_classroom(classroom_id)
-
-    def teacher_item_clicked(self, item):
-        """Handle teacher item selection."""
-        teacher_id = item.data(Qt.UserRole)
-        self.update_teacher(teacher_id)
-
-    def course_item_clicked(self, item):
-        """Handle course item selection."""
-        course_id = item.data(Qt.UserRole)
-        self.update_course(course_id)
 
     def update_classroom(self, classroom_id):
         """Update classroom name."""
@@ -150,32 +163,6 @@ class UpdateDataWindow(QWidget):
             execute_query(query, (new_name, classroom_id))
             QMessageBox.information(self, "Success", "Classroom updated successfully!")
             self.fetch_classroom_data()  # Refresh list
-
-    def update_teacher(self, teacher_id):
-        """Update teacher data."""
-        current_info = self.result_list.currentItem().text().split(" - ")
-        new_name, ok1 = QInputDialog.getText(self, "Update Teacher Name", "Enter new teacher name:", text=current_info[0])
-        new_grade, ok2 = QInputDialog.getText(self, "Update BPS Grade", "Enter new BPS grade:", text=current_info[1])
-        new_specialization, ok3 = QInputDialog.getText(self, "Update Specialization", "Enter new specialization:", text=current_info[2])
-        
-        if ok1 and new_name and ok2 and new_grade and ok3 and new_specialization:
-            query = "UPDATE Teachers SET teacher_name = ?, bps_grade = ?, specialization = ? WHERE teacher_id = ?"
-            execute_query(query, (new_name, new_grade, new_specialization, teacher_id))
-            QMessageBox.information(self, "Success", "Teacher updated successfully!")
-            self.fetch_teacher_data()  # Refresh list
-
-    def update_course(self, course_id):
-        """Update course data."""
-        current_info = self.result_list.currentItem().text().split(" - ")
-        new_name, ok1 = QInputDialog.getText(self, "Update Course Name", "Enter new course name:", text=current_info[0])
-        new_code, ok2 = QInputDialog.getText(self, "Update Course Code", "Enter new course code:", text=current_info[1])
-        new_credits, ok3 = QInputDialog.getText(self, "Update Credits", "Enter new credits:", text=current_info[2])
-        
-        if ok1 and new_name and ok2 and new_code and ok3 and new_credits:
-            query = "UPDATE Courses SET course_name = ?, course_code = ?, credits = ? WHERE course_id = ?"
-            execute_query(query, (new_name, new_code, new_credits, course_id))
-            QMessageBox.information(self, "Success", "Course updated successfully!")
-            self.fetch_course_data()  # Refresh list
 
 
 if __name__ == "__main__":
