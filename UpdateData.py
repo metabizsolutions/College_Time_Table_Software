@@ -1,256 +1,249 @@
-from PyQt5.QtWidgets import (
-    QApplication, QWidget, QVBoxLayout, QPushButton, QLineEdit,
-    QListWidget, QTableWidget, QTableWidgetItem, QMessageBox, QHBoxLayout, QInputDialog
-)
 import sys
+from PyQt5.QtWidgets import (
+    QApplication, QWidget, QVBoxLayout, QPushButton, QLineEdit, 
+    QListWidget, QMessageBox, QHBoxLayout, QInputDialog, 
+    QTableView, QHeaderView
+)
+from PyQt5.QtGui import QStandardItemModel, QStandardItem
+from PyQt5.QtCore import Qt
+import sqlite3
 
-class UpdateDataWindow(QWidget):
+
+class UpdateClassroomWindow(QWidget):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Update Data")
-        self.setGeometry(100, 100, 800, 600)
+        self.setWindowTitle("Update Classrooms")
+        self.setGeometry(100, 100, 600, 400)
 
         # Main layout
-        self.main_layout = QVBoxLayout(self)
+        self.layout = QVBoxLayout()
 
-        # Buttons for update actions
-        self.update_classroom_button = QPushButton("Update Classroom")
-        self.update_teacher_button = QPushButton("Update Teacher")
-        self.update_courses_button = QPushButton("Update Courses")
+        # Update Classroom Button
+        self.update_classroom_button = QPushButton("Update Classrooms")
+        self.update_classroom_button.clicked.connect(self.show_search_bar)
+        self.layout.addWidget(self.update_classroom_button)
+
+        # Search Bar
+        self.search_bar = QLineEdit(self)
+        self.search_bar.setPlaceholderText("Search classrooms...")
+        self.search_bar.textChanged.connect(self.search_classrooms)
+        self.layout.addWidget(self.search_bar)
+
+        # Classroom List
+        self.classroom_list = QListWidget()
+        self.classroom_list.itemClicked.connect(self.classroom_item_clicked)
+        self.layout.addWidget(self.classroom_list)
 
         # Update and Delete buttons
         self.update_button = QPushButton("Update Selected")
-        self.delete_button = QPushButton("Delete Selected")
-
-        self.update_classroom_button.clicked.connect(self.show_classroom_search)
-        self.update_teacher_button.clicked.connect(self.show_teacher_search)
-        self.update_courses_button.clicked.connect(self.show_courses_search)
-
-        # Add buttons to the layout
-        button_layout = QHBoxLayout()
-        button_layout.addWidget(self.update_classroom_button)
-        button_layout.addWidget(self.update_teacher_button)
-        button_layout.addWidget(self.update_courses_button)
-
-        self.main_layout.addLayout(button_layout)
-
-        # Search bar
-        self.search_bar = QLineEdit()
-        self.search_bar.setPlaceholderText("Search...")
-        self.search_bar.textChanged.connect(self.filter_results)
-
-        self.main_layout.addWidget(self.search_bar)
-
-        # List widget for displaying classroom results (single column)
-        self.result_list = QListWidget()
-
-        # Table widget for displaying teacher and course results (multiple columns)
-        self.result_table = QTableWidget()
-
-        self.main_layout.addWidget(self.result_list)  # Initially add the list for classrooms
-        self.main_layout.addWidget(self.result_table)  # Add the table for teachers and courses
-
-        # Set the layout
-        self.setLayout(self.main_layout)
-
-        # Initially hide the search bar, result list, and result table
-        self.search_bar.setVisible(False)
-        self.result_list.setVisible(False)
-        self.result_table.setVisible(False)
-
-        # Add Update and Delete buttons to the layout
-        self.main_layout.addWidget(self.update_button)
-        self.main_layout.addWidget(self.delete_button)
-
-        # Connect button actions
-        self.update_button.clicked.connect(self.update_selected_record)
-        self.delete_button.clicked.connect(self.delete_selected_record)
-
-        # Initially hide update and delete buttons
+        self.update_button.clicked.connect(self.update_classroom)
         self.update_button.setVisible(False)
+        self.layout.addWidget(self.update_button)
+
+        self.delete_button = QPushButton("Delete Selected")
+        self.delete_button.clicked.connect(self.delete_classroom)
         self.delete_button.setVisible(False)
+        self.layout.addWidget(self.delete_button)
 
-        # Attributes to store selected IDs
+        self.setLayout(self.layout)
+
+        # Database connection
+        self.connection = sqlite3.connect('timetable.db')  # Modify with your actual database path
+        self.cursor = self.connection.cursor()
+
+        # Store selected classroom ID and name
         self.selected_classroom_id = None
-        self.selected_teacher_id = None
-        self.selected_course_id = None
+        self.selected_classroom_name = None
 
-    def show_classroom_search(self):
-        # Show list widget for classroom updates
+    def show_search_bar(self):
+        """Display the search bar and initialize the list."""
         self.search_bar.setVisible(True)
-        self.result_list.setVisible(True)
-        self.result_table.setVisible(False)  # Hide the table
-        self.search_bar.clear()
-        self.result_list.clear()
-        self.result_list.itemClicked.connect(self.classroom_item_clicked)
-        self.fetch_classroom_data()  # Fetch initial classroom data
+        self.classroom_list.setVisible(True)
+        self.search_classrooms()
 
-    def show_teacher_search(self):
-        # Show table widget for teacher updates
-        self.search_bar.setVisible(True)
-        self.result_list.setVisible(False)  # Hide the list
-        self.result_table.setVisible(True)
-        self.search_bar.clear()
-        self.result_table.clear()
-        self.result_table.cellClicked.connect(self.teacher_row_clicked)  # Connect row click signal
-        self.fetch_teacher_data()  # Fetch initial teacher data
+    def search_classrooms(self):
+        """Search for classrooms based on the search bar input."""
+        search_text = self.search_bar.text()
+        query = "SELECT classroom_id, classroom_name FROM Classrooms WHERE classroom_name LIKE ?"
+        search_pattern = f'%{search_text}%'
+        self.cursor.execute(query, (search_pattern,))
+        results = self.cursor.fetchall()
 
-    def show_courses_search(self):
-        # Show table widget for course updates
-        self.search_bar.setVisible(True)
-        self.result_list.setVisible(False)  # Hide the list
-        self.result_table.setVisible(True)
-        self.search_bar.clear()
-        self.result_table.clear()
-        self.result_table.cellClicked.connect(self.course_row_clicked)  # Connect row click signal
-        self.fetch_course_data()  # Fetch initial course data
-
-    def filter_results(self):
-        search_text = self.search_bar.text().lower()
-        if self.update_classroom_button.isChecked():
-            self.fetch_classroom_data(search_text)
-        elif self.update_teacher_button.isChecked():
-            self.fetch_teacher_data(search_text)
-        elif self.update_courses_button.isChecked():
-            self.fetch_course_data(search_text)
-
-    def fetch_classroom_data(self, search_text=""):
-        """Fetch classroom names from the database based on the search query."""
-        query = "SELECT classroom_id, classroom_name FROM Classrooms WHERE LOWER(classroom_name) LIKE ?"
-        search_pattern = f"%{search_text}%"  # SQL pattern for matching
-        results = fetch_query_results(query, (search_pattern,))
-
-        self.result_list.clear()
-        if results:
-            for classroom in results:
-                item = QListWidgetItem(classroom[1])  # Display only classroom name
-                item.setData(Qt.UserRole, classroom[0])  # Store ID
-                self.result_list.addItem(item)
-        else:
-            self.result_list.addItem("No classrooms found.")
-
-    def fetch_teacher_data(self, search_text=""):
-        """Fetch teacher data from the database based on the search query."""
-        query = "SELECT teacher_id, teacher_name, bps_grade FROM Teachers WHERE LOWER(teacher_name) LIKE ?"
-        search_pattern = f"%{search_text}%"
-        results = fetch_query_results(query, (search_pattern,))
-
-        # Set up table with 3 columns for teacher data
-        self.result_table.setRowCount(len(results))
-        self.result_table.setColumnCount(3)
-        self.result_table.setHorizontalHeaderLabels(["Teacher Name", "BPS Grade", "Specialization"])
-
-        if results:
-            for row_num, teacher in enumerate(results):
-                self.result_table.setItem(row_num, 0, QTableWidgetItem(teacher[1]))  # Teacher Name
-                self.result_table.setItem(row_num, 1, QTableWidgetItem(str(teacher[2])))  # BPS Grade
-                # Specialization can be omitted if not needed
-                self.result_table.setRowHeight(row_num, 25)  # Set row height
-        else:
-            self.result_table.setRowCount(0)
-            QMessageBox.information(self, "No Teachers", "No teachers found.")
-
-    def fetch_course_data(self, search_text=""):
-        """Fetch course data from the database based on the search query."""
-        query = "SELECT course_id, course_name, course_code, credits FROM Courses WHERE LOWER(course_name) LIKE ?"
-        search_pattern = f"%{search_text}%"
-        results = fetch_query_results(query, (search_pattern,))
-
-        # Set up table with 3 columns for course data (removing credits)
-        self.result_table.setRowCount(len(results))
-        self.result_table.setColumnCount(3)
-        self.result_table.setHorizontalHeaderLabels(["Course Name", "Course Code", "Credits"])
-
-        if results:
-            for row_num, course in enumerate(results):
-                self.result_table.setItem(row_num, 0, QTableWidgetItem(course[1]))  # Course Name
-                self.result_table.setItem(row_num, 1, QTableWidgetItem(course[2]))  # Course Code
-                self.result_table.setItem(row_num, 2, QTableWidgetItem(str(course[3])))  # Credits
-                self.result_table.setRowHeight(row_num, 25)  # Set row height
-        else:
-            self.result_table.setRowCount(0)
-            QMessageBox.information(self, "No Courses", "No courses found.")
+        self.classroom_list.clear()
+        for classroom in results:
+            item = QListWidgetItem(classroom[1])  # Display classroom name
+            item.setData(1, classroom[0])  # Store classroom ID
+            self.classroom_list.addItem(item)
 
     def classroom_item_clicked(self, item):
-        """Handle classroom item selection."""
-        self.selected_classroom_id = item.data(Qt.UserRole)  # Store classroom ID
-        self.update_button.setVisible(True)  # Show the update button
+        """Handle the classroom list item click event."""
+        self.selected_classroom_id = item.data(1)  # Get selected classroom ID
+        self.selected_classroom_name = item.text()  # Get selected classroom name
+        self.update_button.setVisible(True)
+        self.delete_button.setVisible(True)
 
-    def teacher_row_clicked(self, row, column):
-        """Handle teacher row selection."""
-        self.selected_teacher_id = self.result_table.item(row, 0).text()  # Store teacher ID
-        self.update_button.setVisible(True)  # Show the update button
+    def update_classroom(self):
+        """Update the selected classroom by fetching its current data."""
+        if self.selected_classroom_id is not None:
+            # Display the current classroom name in the input dialog for editing
+            new_name, ok = QInputDialog.getText(self, "Update Classroom", 
+                                                f"Current name: {self.selected_classroom_name}\nEnter new classroom name:")
+            if ok and new_name:
+                query = "UPDATE Classrooms SET classroom_name = ? WHERE classroom_id = ?"
+                self.cursor.execute(query, (new_name, self.selected_classroom_id))
+                self.connection.commit()
+                QMessageBox.information(self, "Success", "Classroom updated successfully!")
+                self.search_classrooms()  # Refresh the list with updated data
 
-    def course_row_clicked(self, row, column):
-        """Handle course row selection."""
-        self.selected_course_id = self.result_table.item(row, 0).text()  # Store course ID
-        self.update_button.setVisible(True)  # Show the update button
+    def delete_classroom(self):
+        """Delete the selected classroom."""
+        if self.selected_classroom_id is not None:
+            confirm = QMessageBox.question(self, "Confirm Delete", "Are you sure you want to delete this classroom?")
+            if confirm == QMessageBox.Yes:
+                query = "DELETE FROM Classrooms WHERE classroom_id = ?"
+                self.cursor.execute(query, (self.selected_classroom_id,))
+                self.connection.commit()
+                QMessageBox.information(self, "Success", "Classroom deleted successfully!")
+                self.search_classrooms()  # Refresh the list
 
-    def update_selected_record(self):
-        """Update the selected classroom, teacher, or course."""
-        if self.update_classroom_button.isChecked() and self.selected_classroom_id is not None:
-            self.update_classroom(self.selected_classroom_id)
-        elif self.update_teacher_button.isChecked() and self.selected_teacher_id is not None:
-            self.update_teacher(self.selected_teacher_id)
-        elif self.update_courses_button.isChecked() and self.selected_course_id is not None:
-            self.update_course(self.selected_course_id)
 
-    def update_classroom(self, classroom_id):
-        """Update classroom information."""
-        classroom_name = self.result_list.currentItem().text()  # Get the currently selected classroom name
-        new_name, ok = QInputDialog.getText(self, "Update Classroom", "Enter new classroom name:", text=classroom_name)
+class UpdateTeachersWindow(QWidget):
+    def __init__(self):
+        super().__init__()
 
-        if ok and new_name:
-            query = "UPDATE Classrooms SET classroom_name = ? WHERE classroom_id = ?"
-            execute_query(query, (new_name, classroom_id))
-            QMessageBox.information(self, "Success", "Classroom updated successfully!")
-            self.fetch_classroom_data()  # Refresh the data
+        self.setWindowTitle('Update Teachers')
+        self.setGeometry(100, 100, 600, 400)
 
-    def update_teacher(self, teacher_id):
-        """Update teacher information."""
-        current_name = self.result_table.item(self.result_table.currentRow(), 0).text()
-        new_name, ok = QInputDialog.getText(self, "Update Teacher", "Enter new teacher name:", text=current_name)
+        # Layouts
+        main_layout = QVBoxLayout()
+        search_layout = QHBoxLayout()
 
-        if ok and new_name:
-            query = "UPDATE Teachers SET teacher_name = ? WHERE teacher_id = ?"
-            execute_query(query, (new_name, teacher_id))
-            QMessageBox.information(self, "Success", "Teacher updated successfully!")
-            self.fetch_teacher_data()  # Refresh the data
+        # Search bar to enter the teacher's name
+        self.search_bar = QLineEdit()
+        self.search_bar.setPlaceholderText("Enter teacher name to search...")
+        search_layout.addWidget(self.search_bar)
 
-    def update_course(self, course_id):
-        """Update course information."""
-        current_name = self.result_table.item(self.result_table.currentRow(), 0).text()
-        new_name, ok = QInputDialog.getText(self, "Update Course", "Enter new course name:", text=current_name)
+        # Search button
+        self.search_btn = QPushButton("Search")
+        self.search_btn.clicked.connect(self.search_teacher)
+        search_layout.addWidget(self.search_btn)
 
-        if ok and new_name:
-            query = "UPDATE Courses SET course_name = ? WHERE course_id = ?"
-            execute_query(query, (new_name, course_id))
-            QMessageBox.information(self, "Success", "Course updated successfully!")
-            self.fetch_course_data()  # Refresh the data
+        # Add the search layout to the main layout
+        main_layout.addLayout(search_layout)
 
-    def delete_selected_record(self):
-        """Delete the selected teacher or course."""
-        if self.update_teacher_button.isChecked() and self.selected_teacher_id is not None:
-            self.delete_teacher(self.selected_teacher_id)
-        elif self.update_courses_button.isChecked() and self.selected_course_id is not None:
-            self.delete_course(self.selected_course_id)
+        # Table view to display the search results
+        self.table_view = QTableView()
+        self.table_view.horizontalHeader().setStretchLastSection(True)
+        self.table_view.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        main_layout.addWidget(self.table_view)
 
-    def delete_teacher(self, teacher_id):
-        """Delete a teacher."""
-        query = "DELETE FROM Teachers WHERE teacher_id = ?"
-        execute_query(query, (teacher_id,))
-        QMessageBox.information(self, "Success", "Teacher deleted successfully!")
-        self.fetch_teacher_data()  # Refresh the data
+        # Set the main layout for the window
+        self.setLayout(main_layout)
 
-    def delete_course(self, course_id):
-        """Delete a course."""
-        query = "DELETE FROM Courses WHERE course_id = ?"
-        execute_query(query, (course_id,))
-        QMessageBox.information(self, "Success", "Course deleted successfully!")
-        self.fetch_course_data()  # Refresh the data
+        # Initialize SQLite connection
+        self.conn = sqlite3.connect('timetable.db')  # Ensure your database path is correct
+        self.cur = self.conn.cursor()
+
+        # Store selected teacher ID
+        self.selected_teacher_id = None
+
+        # Update and Delete buttons
+        self.update_button = QPushButton("Update Selected")
+        self.update_button.clicked.connect(self.update_teacher)
+        self.update_button.setEnabled(False)
+        main_layout.addWidget(self.update_button)
+
+        self.delete_button = QPushButton("Delete Selected")
+        self.delete_button.clicked.connect(self.delete_teacher)
+        self.delete_button.setEnabled(False)
+        main_layout.addWidget(self.delete_button)
+
+    def search_teacher(self):
+        """Search for teachers based on the search bar input."""
+        search_query = self.search_bar.text()
+
+        if search_query:
+            query = f"SELECT * FROM Teachers WHERE teacher_name LIKE ?"
+            search_pattern = f'%{search_query}%'
+            self.cur.execute(query, (search_pattern,))
+        else:
+            query = "SELECT * FROM Teachers"  # Fetch all records if search is empty
+            self.cur.execute(query)
+
+        # Execute the query and fetch results
+        results = self.cur.fetchall()
+
+        if results:
+            self.display_results(results)
+        else:
+            QMessageBox.information(self, "No results", "No teacher found with that name.")
+
+    def display_results(self, results):
+        """Display the search results in the teacher table."""
+        # Define headers based on your "Teachers" table structure
+        headers = ['Teacher ID', 'Name', 'BPS Grade', 'Specialization']
+
+        # Populate the QTableView with the fetched data
+        model = QStandardItemModel(len(results), len(headers))
+        model.setHorizontalHeaderLabels(headers)
+
+        for row, data in enumerate(results):
+            for column, value in enumerate(data):
+                item = QStandardItem(str(value))
+                model.setItem(row, column, item)
+
+        self.table_view.setModel(model)
+
+        # Enable update and delete buttons if a teacher is selected
+        self.table_view.clicked.connect(self.table_item_clicked)
+
+    def table_item_clicked(self, index):
+        """Handle the table item click event."""
+        self.selected_teacher_id = int(self.table_view.model().item(index.row(), 0).text())  # Get selected teacher ID
+        self.update_button.setEnabled(True)
+        self.delete_button.setEnabled(True)
+
+    def update_teacher(self):
+        """Update the selected teacher by fetching its current data."""
+        if self.selected_teacher_id is not None:
+            current_data_query = "SELECT * FROM Teachers WHERE teacher_id = ?"
+            self.cur.execute(current_data_query, (self.selected_teacher_id,))
+            current_data = self.cur.fetchone()
+
+            # Check if current_data is None
+            if current_data is None:
+                QMessageBox.warning(self, "Error", "Teacher not found!")
+                return
+
+            # Display the current teacher details in the input dialogs for editing
+            new_name, ok_name = QInputDialog.getText(self, "Update Teacher Name", 
+                                                     f"Current name: {current_data[1]}\nEnter new name:")
+            new_grade, ok_grade = QInputDialog.getText(self, "Update Teacher Grade", 
+                                                       f"Current grade: {current_data[2]}\nEnter new grade:")
+            new_specialization, ok_spec = QInputDialog.getText(self, "Update Teacher Specialization", 
+                                                               f"Current specialization: {current_data[3]}\nEnter new specialization:")
+
+            if ok_name and new_name and ok_grade and new_grade and ok_spec and new_specialization:
+                update_query = "UPDATE Teachers SET teacher_name = ?, bps_grade = ?, specialization = ? WHERE teacher_id = ?"
+                self.cur.execute(update_query, (new_name, new_grade, new_specialization, self.selected_teacher_id))
+                self.conn.commit()
+                QMessageBox.information(self, "Success", "Teacher updated successfully!")
+                self.search_teacher()  # Refresh the table view with updated data
+
+    def delete_teacher(self):
+        """Delete the selected teacher."""
+        if self.selected_teacher_id is not None:
+            confirm = QMessageBox.question(self, "Confirm Delete", "Are you sure you want to delete this teacher?")
+            if confirm == QMessageBox.Yes:
+                delete_query = "DELETE FROM Teachers WHERE teacher_id = ?"
+                self.cur.execute(delete_query, (self.selected_teacher_id,))
+                self.conn.commit()
+                QMessageBox.information(self, "Success", "Teacher deleted successfully!")
+                self.search_teacher()  # Refresh the table view
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    window = UpdateDataWindow()
+    window = UpdateTeachersWindow()
     window.show()
     sys.exit(app.exec_())
