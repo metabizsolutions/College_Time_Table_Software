@@ -480,11 +480,6 @@ class MainApp(QtWidgets.QWidget):
         self.create_timetable_window = CreateTimetableWindow()  # Open the create timetable window
         self.create_timetable_window.show()
 
-
-
-
-
-
 if __name__ == "__main__":
     app = QtWidgets.QApplication([])
     main_app = MainApp()
