@@ -91,6 +91,44 @@ class MainApp(QtWidgets.QWidget):
         self.create_timetable_button.clicked.connect(self.open_create_timetable_window)
         self.button_layout.addWidget(self.create_timetable_button)
 
+    #     self.layout = QVBoxLayout()
+
+    #     # Create the "Report" button
+    #     self.report_button = QPushButton('Report', self)
+    #     self.report_button.clicked.connect(self.show_report_options)
+    #     self.layout.addWidget(self.report_button)
+
+    #     # Add a widget to hold the buttons
+    #     self.container = QWidget()
+    #     self.container.setLayout(self.layout)
+    #     self.setCentralWidget(self.container)
+
+    # # Function to display the report buttons
+    # def show_report_options(self):
+    #     # Create the buttons for the report options
+    #     self.overall_button = QPushButton('Print Overall Timetable', self)
+    #     self.dept_button = QPushButton('Print Department Wise Timetable', self)
+    #     self.workload_button = QPushButton('Print Workload', self)
+
+    #     # Add the buttons to the layout
+    #     self.layout.addWidget(self.overall_button)
+    #     self.layout.addWidget(self.dept_button)
+    #     self.layout.addWidget(self.workload_button)
+
+    #     # Connect buttons to their respective functions
+    #     self.overall_button.clicked.connect(self.print_overall_timetable)
+    #     self.dept_button.clicked.connect(self.print_department_wise_timetable)
+    #     self.workload_button.clicked.connect(self.print_workload)
+
+    # def print_overall_timetable(self):
+    #     print("Printing Overall Timetable...")
+
+    # def print_department_wise_timetable(self):
+    #     print("Printing Department Wise Timetable...")
+
+    # def print_workload(self):
+    #     print("Printing Workload...")
+
 
 
 

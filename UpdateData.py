@@ -14,11 +14,6 @@ class UpdateDataWindow(QWidget):
 
         self.setWindowTitle('Update Classrooms')
         self.setGeometry(100, 100, 600, 400)
-        self.setWindowTitle('Update Teachers')
-        self.setGeometry(100, 100, 600, 400)
-        
-        self.setWindowTitle('Update Courses')
-        self.setGeometry(100, 100, 600, 400)
 
         # Layouts
         main_layout = QVBoxLayout()
@@ -142,7 +137,8 @@ class UpdateTeachersWindow(QWidget):
     def __init__(self):
         super().__init__()
 
-        
+        self.setWindowTitle('Update Teachers')
+        self.setGeometry(100, 100, 600, 400)
 
         main_layout = QVBoxLayout()
         search_layout = QHBoxLayout()
@@ -256,6 +252,8 @@ class UpdateCoursesWindow(QWidget):
     def __init__(self):
         super().__init__()
 
+        self.setWindowTitle('Update Courses')
+        self.setGeometry(100, 100, 600, 400)
 
         main_layout = QVBoxLayout()
         search_layout = QHBoxLayout()
@@ -311,7 +309,7 @@ class UpdateCoursesWindow(QWidget):
             QMessageBox.information(self, "No results", "No course found with that name.")
 
     def display_results(self, results):
-        headers = ['Course ID', 'Course Name', 'Course Code', 'Credits']
+        headers = ['Course ID', 'Name', 'Course Code', 'Credits']
 
         model = QStandardItemModel(len(results), len(headers))
         model.setHorizontalHeaderLabels(headers)
@@ -344,10 +342,10 @@ class UpdateCoursesWindow(QWidget):
                                                      f"Current name: {current_data[1]}\nEnter new name:")
             new_code, ok_code = QInputDialog.getText(self, "Update Course Code",
                                                      f"Current code: {current_data[2]}\nEnter new code:")
-            new_credits, ok_credits = QInputDialog.getInt(self, "Update Course Credits",
-                                                          f"Current credits: {current_data[3]}\nEnter new credits:", value=current_data[3])
+            new_credits, ok_credits = QInputDialog.getText(self, "Update Course Credits",
+                                                           f"Current credits: {current_data[3]}\nEnter new credits:")
 
-            if ok_name and new_name and ok_code and new_code:
+            if ok_name and new_name and ok_code and new_code and ok_credits and new_credits:
                 update_query = "UPDATE Courses SET course_name = ?, course_code = ?, credits = ? WHERE course_id = ?"
                 self.cur.execute(update_query, (new_name, new_code, new_credits, self.selected_course_id))
                 self.conn.commit()
@@ -369,39 +367,39 @@ class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle('Main Window')
-        self.setGeometry(100, 100, 300, 200)
+        self.setWindowTitle('Update Records')
+        self.setGeometry(100, 100, 400, 300)
 
         layout = QVBoxLayout()
 
-        self.update_classrooms_btn = QPushButton("Update Classrooms")
-        self.update_classrooms_btn.clicked.connect(self.open_update_classrooms_window)
-        layout.addWidget(self.update_classrooms_btn)
+        btn_update_classrooms = QPushButton("Update Classrooms")
+        btn_update_classrooms.clicked.connect(self.show_update_classrooms_window)
+        layout.addWidget(btn_update_classrooms)
 
-        self.update_teachers_btn = QPushButton("Update Teachers")
-        self.update_teachers_btn.clicked.connect(self.open_update_teachers_window)
-        layout.addWidget(self.update_teachers_btn)
+        btn_update_teachers = QPushButton("Update Teachers")
+        btn_update_teachers.clicked.connect(self.show_update_teachers_window)
+        layout.addWidget(btn_update_teachers)
 
-        self.update_courses_btn = QPushButton("Update Courses")
-        self.update_courses_btn.clicked.connect(self.open_update_courses_window)
-        layout.addWidget(self.update_courses_btn)
+        btn_update_courses = QPushButton("Update Courses")
+        btn_update_courses.clicked.connect(self.show_update_courses_window)
+        layout.addWidget(btn_update_courses)
 
         self.setLayout(layout)
 
-    def open_update_classrooms_window(self):
-        self.window = UpdateDataWindow()
-        self.window.show()
+    def show_update_classrooms_window(self):
+        self.update_classrooms_window = UpdateDataWindow()
+        self.update_classrooms_window.show()
 
-    def open_update_teachers_window(self):
-        self.window = UpdateTeachersWindow()
-        self.window.show()
+    def show_update_teachers_window(self):
+        self.update_teachers_window = UpdateTeachersWindow()
+        self.update_teachers_window.show()
 
-    def open_update_courses_window(self):
-        self.window = UpdateCoursesWindow()
-        self.window.show()
+    def show_update_courses_window(self):
+        self.update_courses_window = UpdateCoursesWindow()
+        self.update_courses_window.show()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     app = QApplication(sys.argv)
     main_window = MainWindow()
     main_window.show()
