@@ -3,6 +3,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from AddData import AddDataWindow
 from ViewTimetable import ViewTimetableWindow
 from UpdateData import UpdateDataWindow
+from UpdateData import MainWindow
 from CreateTimetable import CreateTimetableWindow
 from PyQt5.QtWidgets import QMainWindow, QLabel, QLineEdit, QPushButton, QVBoxLayout, QWidget
 from PyQt5.QtCore import Qt
@@ -90,13 +91,16 @@ class MainApp(QtWidgets.QWidget):
         self.create_timetable_button.clicked.connect(self.open_create_timetable_window)
         self.button_layout.addWidget(self.create_timetable_button)
 
+
+
+
         # Add the button widget to the main layout
         self.layout.addWidget(self.button_widget)
 
     def add_footer(self):
         footer_label = QtWidgets.QLabel("Developed by MetaBiz Solutions", self)
         footer_label.setAlignment(QtCore.Qt.AlignCenter)
-        footer_label.setStyleSheet("font-size: 14px; font-weight: bold; color: black; padding: 10px;")
+        footer_label.setStyleSheet("font-size: 18px; font-weight: bold; color: black; padding: 10px;")
         self.layout.addWidget(footer_label)
 
     def open_add_data_window(self):
@@ -473,7 +477,7 @@ class MainApp(QtWidgets.QWidget):
         self.view_timetable_window.show()
 
     def open_update_data_window(self):
-        self.update_data_window = UpdateDataWindow()  # Open the update data window
+        self.update_data_window = MainWindow()  # Open the update data window
         self.update_data_window.show()
 
     def open_create_timetable_window(self):
