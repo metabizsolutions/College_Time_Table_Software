@@ -74,7 +74,7 @@ class ViewTimetableWindow(QWidget):
 
                     # Create Update button
                     update_button = QPushButton("Update")
-                    update_button.clicked.connect(lambda checked, id=row_data[0]: self.open_update_window(id, row_data))
+                    update_button.clicked.connect(lambda checked, id=row_data[0], data=row_data: self.open_update_window(id, data))
                     self.table_widget.setCellWidget(row_index, len(row_data), update_button)  # Last column for Update button
 
                     # Create Delete button
@@ -208,8 +208,6 @@ def update_record(table_name, record_id, updated_data):
         connection.close()
 
 if __name__ == "__main__":
-
-
     app = QApplication(sys.argv)
     window = ViewTimetableWindow()
     window.show()
