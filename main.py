@@ -13,13 +13,15 @@ from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import QMessageBox
 from PyQt5.QtWidgets import QComboBox, QMessageBox, QFormLayout, QScrollArea
 import sqlite3
+from database import create_database
+
 class MainApp(QtWidgets.QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("College Timetable Management System")
         self.setGeometry(200, 200, 800, 600)
         self.showMaximized() 
-        
+        create_database("timetable.db")
 
         # Set sky blue background
         self.setStyleSheet("background-color: skyblue;")
@@ -322,26 +324,44 @@ class MainApp(QtWidgets.QWidget):
         classroom_name = self.textbox_classroom.text()
         
         # Connect to the database
-        connection = sqlite3.connect('timetable.db')
-        cursor = connection.cursor()
-        
-        # Insert the new classroom name into the Classrooms table
-        cursor.execute("""
-            INSERT INTO Classrooms (classroom_name)
-            VALUES (?)
-        """, (classroom_name,))
-        
-        # Commit the changes and close the connection
-        connection.commit()
-        connection.close()
+        try:
+            connection = sqlite3.connect('timetable.db')
+            cursor = connection.cursor()
+            
+            # Insert the new classroom name into the Classrooms table
+            cursor.execute("""
+                INSERT INTO Classrooms (classroom_name)
+                VALUES (?)
+            """, (classroom_name,))
+            
+            # Commit the changes
+            connection.commit()
+
             # Display success message
-        msg = QMessageBox()
-        msg.setIcon(QMessageBox.Information)
-        msg.setText(f"Classroom '{classroom_name}' added successfully!")
-        msg.setWindowTitle("Success")
-        msg.exec_()
-        print(f"Classroom Added: {classroom_name}")
-        self.textbox_classroom.setText("")
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Information)
+            msg.setText(f"Classroom '{classroom_name}' added successfully!")
+            msg.setWindowTitle("Success")
+            msg.exec_()
+            print(f"Classroom Added: {classroom_name}")
+            
+        except sqlite3.Error as e:
+            # Handle the error
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Critical)
+            msg.setText(f"Error adding classroom: {e}")
+            msg.setWindowTitle("Error")
+            msg.exec_()
+            print(f"Error: {e}")
+
+        finally:
+            # Ensure the connection is closed
+            if connection:
+                connection.close()
+            
+            # Clear the textbox
+            self.textbox_classroom.setText("")
+
 
 
     def add_course(self):
