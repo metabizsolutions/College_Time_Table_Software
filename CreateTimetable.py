@@ -193,6 +193,26 @@ class CreateTimetableWindow(QWidget):
             QMessageBox.warning(self, "Input Error", "Please fill in all the fields.")
             return
 
+        # Validate time inputs
+        if start_time >= end_time:
+            QMessageBox.warning(self, "Time Error", "End time must be later than start time.")
+            return
+
+        # Check for overlapping teacher schedules
+        if self.is_teacher_scheduled(teacher, start_time, end_time):
+            QMessageBox.warning(self, "Schedule Conflict", f"This teacher is already scheduled during this time.")
+            return
+
+        # Check for overlapping classroom assignments
+        if self.is_classroom_assigned(classroom, start_time, end_time):
+            QMessageBox.warning(self, "Classroom Conflict", f"This classroom is already assigned during this time.")
+            return
+
+        # Check if the course title and code are unique for the given semester
+        if self.is_course_unique(course_title, course_code, semester):
+            QMessageBox.warning(self, "Course Conflict", f"This course title and code already exist for the selected semester.")
+            return
+
         # Insert the data into the Timetable table
         try:
             query = """
@@ -201,10 +221,53 @@ class CreateTimetableWindow(QWidget):
             """
             self.cursor.execute(query, (department, semester, teacher, course_title, course_code, classroom, start_time, end_time, session))
             self.conn.commit()
-
-            QMessageBox.information(self, "Success", "Timetable created successfully!")
+            QMessageBox.information(self, "Success", "Timetable entry created successfully!")
+            self.clear_inputs()  # Clear the input fields after successful submission
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"Failed to create timetable: {e}")
+            QMessageBox.critical(self, "Database Error", f"An error occurred: {e}")
+
+    def clear_inputs(self):
+        """Clear all input fields."""
+        self.department_input.clear()
+        self.semester_input.clear()
+        self.teacher_input.clear()
+        self.course_title_input.clear()
+        self.course_code_input.clear()
+        self.classroom_input.clear()
+        self.start_time_input.setTime(QTime.currentTime())
+        self.end_time_input.setTime(QTime.currentTime())
+        self.session_combo.setCurrentIndex(0)
+
+    def is_teacher_scheduled(self, teacher, start_time, end_time):
+        """Check if the teacher is already scheduled during the specified time."""
+        query = """
+        SELECT * FROM Timetable 
+        WHERE teacher = ? AND 
+              ((lecture_start_time < ? AND lecture_end_time > ?) OR 
+               (lecture_start_time < ? AND lecture_end_time > ?))
+        """
+        self.cursor.execute(query, (teacher, end_time, start_time, start_time, end_time))
+        return bool(self.cursor.fetchall())
+
+    def is_classroom_assigned(self, classroom, start_time, end_time):
+        """Check if the classroom is already assigned during the specified time."""
+        query = """
+        SELECT * FROM Timetable 
+        WHERE classroom = ? AND 
+              ((lecture_start_time < ? AND lecture_end_time > ?) OR 
+               (lecture_start_time < ? AND lecture_end_time > ?))
+        """
+        self.cursor.execute(query, (classroom, end_time, start_time, start_time, end_time))
+        return bool(self.cursor.fetchall())
+
+    def is_course_unique(self, course_title, course_code, semester):
+        """Check if the course title and code are unique for the given semester."""
+        query = """
+        SELECT * FROM Timetable 
+        WHERE (course_title = ? OR course_code = ?) AND semester = ?
+        """
+        self.cursor.execute(query, (course_title, course_code, semester))
+        return bool(self.cursor.fetchall())
 
     def closeEvent(self, event):
         """Close the database connection when the window is closed."""
@@ -212,8 +275,7 @@ class CreateTimetableWindow(QWidget):
         event.accept()
 
 if __name__ == "__main__":
-    app = QApplication([])
+    app = QApplication(sys.argv)
     window = CreateTimetableWindow()
-    window.showMaximized()
-    
+    window.show()
     sys.exit(app.exec_())
