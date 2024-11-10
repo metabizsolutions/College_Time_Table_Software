@@ -3,8 +3,8 @@ import sqlite3
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QTableWidget, 
                              QTableWidgetItem, QPushButton, QLabel, 
                              QMessageBox, QApplication, QFormLayout, 
-                             QLineEdit, QHeaderView, QComboBox, QHBoxLayout, QFileDialog)
-from PyQt5.QtCore import pyqtSignal, Qt, QRect
+                             QLineEdit, QHeaderView, QComboBox, QHBoxLayout, QFileDialog,QTimeEdit)
+from PyQt5.QtCore import pyqtSignal, Qt, QRect,QTime
 from PyQt5.QtPrintSupport import QPrinter, QPrintDialog
 from PyQt5.QtGui import QPainter, QFont
 from datetime import datetime
@@ -340,17 +340,20 @@ class UpdateTimetableWindow(QWidget):
         self.parent = parent  
 
         self.layout = QFormLayout(self)
-        
-        self.department_input = QLineEdit(self)
-        self.department_input.setText(row_data[1])  
+
+        # Department ComboBox populated from the database
+        self.department_input = QComboBox(self)
+        self.populate_combobox(self.department_input, "Department", row_data[1])
         self.layout.addRow("Department:", self.department_input)
 
-        self.semester_input = QLineEdit(self)
-        self.semester_input.setText(row_data[2])  
+        # Semester ComboBox populated from the database
+        self.semester_input = QComboBox(self)
+        self.populate_combobox(self.semester_input, "Semester", row_data[2])
         self.layout.addRow("Semester:", self.semester_input)
 
-        self.teacher_input = QLineEdit(self)
-        self.teacher_input.setText(row_data[3])  
+        # Teacher ComboBox populated from the database
+        self.teacher_input = QComboBox(self)
+        self.populate_combobox(self.teacher_input, "Teacher", row_data[3])
         self.layout.addRow("Teacher:", self.teacher_input)
 
         self.course_title_input = QLineEdit(self)
@@ -365,12 +368,16 @@ class UpdateTimetableWindow(QWidget):
         self.classroom_input.setText(row_data[6])  
         self.layout.addRow("Classroom:", self.classroom_input)
 
-        self.start_time_input = QLineEdit(self)
-        self.start_time_input.setText(row_data[7])  
+        # Use QTimeEdit for start time with 12-hour format
+        self.start_time_input = QTimeEdit(self)
+        self.start_time_input.setDisplayFormat("hh:mm AP")
+        self.start_time_input.setTime(QTime.fromString(row_data[7], "hh:mm AP"))  # Set initial time
         self.layout.addRow("Start Time:", self.start_time_input)
 
-        self.end_time_input = QLineEdit(self)
-        self.end_time_input.setText(row_data[8])  
+        # Use QTimeEdit for end time with 12-hour format
+        self.end_time_input = QTimeEdit(self)
+        self.end_time_input.setDisplayFormat("hh:mm AP")
+        self.end_time_input.setTime(QTime.fromString(row_data[8], "hh:mm AP"))  # Set initial time
         self.layout.addRow("End Time:", self.end_time_input)
 
         self.session_input = QLineEdit(self)
@@ -383,16 +390,33 @@ class UpdateTimetableWindow(QWidget):
 
         self.setLayout(self.layout)
 
+    def populate_combobox(self, combo_box, column_name, current_value):
+        """Populate the combo box with data from the database."""
+        query = f"SELECT DISTINCT {column_name} FROM Timetable"
+        values = fetch_query_results(query)
+
+        # Add 'All' option for non-specific filtering
+        combo_box.addItem(f"All {column_name}s")
+        
+        for value in values:
+            combo_box.addItem(value[0])
+        
+        # Set the current value from the record if available
+        if current_value:
+            index = combo_box.findText(current_value)
+            if index != -1:
+                combo_box.setCurrentIndex(index)
+
     def update_record(self):
         updated_data = (
-            self.department_input.text(),
-            self.semester_input.text(),
-            self.teacher_input.text(),
+            self.department_input.currentText(),
+            self.semester_input.currentText(),
+            self.teacher_input.currentText(),
             self.course_title_input.text(),
             self.course_code_input.text(),
             self.classroom_input.text(),
-            self.start_time_input.text(),
-            self.end_time_input.text(),
+            self.start_time_input.time().toString("hh:mm AP"),  # Get selected start time
+            self.end_time_input.time().toString("hh:mm AP"),    # Get selected end time
             self.session_input.text()
         )
 
@@ -402,6 +426,7 @@ class UpdateTimetableWindow(QWidget):
         if self.parent:
             self.parent.load_timetable_data()
         self.close()
+
 
 def update_record(table_name, record_id, updated_data):
     query = f"""UPDATE {table_name} 
