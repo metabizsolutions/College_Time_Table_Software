@@ -4,7 +4,7 @@ from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QTableWidget,
                              QTableWidgetItem, QPushButton, QLabel, 
                              QMessageBox, QApplication, QFormLayout, 
                              QLineEdit, QHeaderView, QComboBox, QHBoxLayout, QFileDialog)
-from PyQt5.QtCore import pyqtSignal, Qt
+from PyQt5.QtCore import pyqtSignal, Qt, QRect
 from PyQt5.QtPrintSupport import QPrinter, QPrintDialog
 from PyQt5.QtGui import QPainter, QFont
 
@@ -196,16 +196,12 @@ class ViewTimetableWindow(QWidget):
         # Set title font
         painter.setFont(QFont("Arial", 14, QFont.Bold))
 
-        # Set title font
-        painter.setFont(QFont("Arial", 14, QFont.Bold))
-
         # Calculate the width of the title text
         title_text = "Timetable"
         font_metrics = painter.fontMetrics()
         title_width = font_metrics.horizontalAdvance(title_text)  # This gives the correct width of the text
 
         # Calculate the x-position to center the text
-        page_width = printer.pageRect().width()
         x_position = (page_width - title_width) / 2
 
         # Ensure that x_position and y_position are integers
@@ -233,10 +229,18 @@ class ViewTimetableWindow(QWidget):
             x_position = margin_left
             for column in range(1, self.table_widget.columnCount() - 2):  # Exclude ID column
                 item = self.table_widget.item(row, column)
-                painter.drawText(x_position, y_position, item.text() if item else "")
+                
+                # Define the rectangle for the cell
+                cell_rect = QRect(x_position, y_position - row_height, col_widths[column - 1], row_height)
+
+                # Center the text horizontally and vertically within the cell
+                painter.drawText(cell_rect, Qt.AlignCenter, item.text() if item else "")
+
                 # Draw the cell borders
-                painter.drawRect(x_position - 1, y_position - row_height, col_widths[column - 1], row_height)
+                painter.drawRect(cell_rect)
+
                 x_position += col_widths[column - 1]
+            
             y_position += row_height  # Move to next row
 
             # Check if we need to fit the table in multiple pages
@@ -250,7 +254,6 @@ class ViewTimetableWindow(QWidget):
 
         # Display success message
         QMessageBox.information(self, "Success", f"PDF saved successfully at {file_path}")
-
 
 
     def open_update_window(self, record_id, row_data):
