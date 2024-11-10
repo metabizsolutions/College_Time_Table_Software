@@ -7,6 +7,7 @@ from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QTableWidget,
 from PyQt5.QtCore import pyqtSignal, Qt, QRect
 from PyQt5.QtPrintSupport import QPrinter, QPrintDialog
 from PyQt5.QtGui import QPainter, QFont
+from datetime import datetime
 
 def fetch_query_results(query, params=()):
     connection = sqlite3.connect('timetable.db')
@@ -165,6 +166,16 @@ class ViewTimetableWindow(QWidget):
             delete_button.clicked.connect(lambda checked, id=row_data[0]: self.delete_record(id))
             self.table_widget.setCellWidget(row_index, len(row_data) + 1, delete_button)
 
+
+
+
+
+
+
+
+
+
+
     def print_to_pdf(self):
         """Generate a PDF from the current table data."""
         # Open file dialog for the user to choose a save location
@@ -189,7 +200,7 @@ class ViewTimetableWindow(QWidget):
         margin_top = 50
         page_width = printer.pageRect().width() - 2 * margin_left
         page_height = printer.pageRect().height() - 2 * margin_top
-        row_height = 225  # Row height for better readability
+        row_height = 600  # Set a fixed row height for all rows
         col_widths = [1200, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000]  # Set column widths dynamically
         y_position = margin_top
 
@@ -199,12 +210,10 @@ class ViewTimetableWindow(QWidget):
         # Calculate the width of the title text
         title_text = "Timetable"
         font_metrics = painter.fontMetrics()
-        title_width = font_metrics.horizontalAdvance(title_text)  # This gives the correct width of the text
+        title_width = font_metrics.horizontalAdvance(title_text)
 
         # Calculate the x-position to center the text
         x_position = (page_width - title_width) / 2
-
-        # Ensure that x_position and y_position are integers
         x_position = int(x_position)
         y_position = int(y_position)
 
@@ -225,23 +234,65 @@ class ViewTimetableWindow(QWidget):
 
         # Set normal font for table rows
         painter.setFont(QFont("Arial", 9))
+
         for row in range(self.table_widget.rowCount()):
             x_position = margin_left
+
             for column in range(1, self.table_widget.columnCount() - 2):  # Exclude ID column
                 item = self.table_widget.item(row, column)
-                
-                # Define the rectangle for the cell
-                cell_rect = QRect(x_position, y_position - row_height, col_widths[column - 1], row_height)
+                text = item.text() if item else ""
 
-                # Center the text horizontally and vertically within the cell
-                painter.drawText(cell_rect, Qt.AlignCenter, item.text() if item else "")
+                # Format time columns in 12-hour format (if the column contains time data)
+                if "time" in text.lower():  # Check if the text represents time
+                    try:
+                        # Parse the time in 24-hour format (assuming 'HH:MM' format)
+                        time_obj = datetime.strptime(text, "%H:%M")  # 24-hour format
+                        text = time_obj.strftime("%I:%M %p")  # Convert to 12-hour format (AM/PM)
+                    except ValueError:
+                        pass  # If it's not a valid time, leave it unchanged
+
+                # Check if the column represents start time, end time, or starting time
+                if "start_time" in self.table_widget.horizontalHeaderItem(column).text().lower():
+                    # Format start time
+                    try:
+                        time_obj = datetime.strptime(text, "%H:%M")
+                        text = time_obj.strftime("%I:%M %p")  # 12-hour format (AM/PM)
+                    except ValueError:
+                        pass
+                elif "end_time" in self.table_widget.horizontalHeaderItem(column).text().lower():
+                    # Format end time
+                    try:
+                        time_obj = datetime.strptime(text, "%H:%M")
+                        text = time_obj.strftime("%I:%M %p")  # 12-hour format (AM/PM)
+                    except ValueError:
+                        pass
+                elif "classroom" in self.table_widget.horizontalHeaderItem(column).text().lower():
+                    # Leave the classroom text unchanged
+                    pass
+                elif "starting_time" in self.table_widget.horizontalHeaderItem(column).text().lower():
+                    # Format the starting time if it's a time column
+                    try:
+                        time_obj = datetime.strptime(text, "%H:%M")
+                        text = time_obj.strftime("%I:%M %p")  # 12-hour format (AM/PM)
+                    except ValueError:
+                        pass
+
+                # Set the word wrap for text drawing and center the text in the cell
+                text_options = Qt.TextWordWrap | Qt.AlignCenter  # Align text horizontally and vertically in the center
+
+                # Define the rectangle for the cell with fixed row height
+                cell_rect = QRect(x_position, y_position, col_widths[column - 1], row_height)
+
+                # Draw the text inside the cell with word wrapping enabled
+                painter.drawText(cell_rect, text_options, text)
 
                 # Draw the cell borders
                 painter.drawRect(cell_rect)
 
                 x_position += col_widths[column - 1]
-            
-            y_position += row_height  # Move to next row
+
+            # After processing all columns in the row, move the y-position down by the fixed row height
+            y_position += row_height  # Move to the next row
 
             # Check if we need to fit the table in multiple pages
             if y_position > page_height - row_height:
@@ -254,6 +305,14 @@ class ViewTimetableWindow(QWidget):
 
         # Display success message
         QMessageBox.information(self, "Success", f"PDF saved successfully at {file_path}")
+
+
+
+
+
+
+
+
 
 
     def open_update_window(self, record_id, row_data):

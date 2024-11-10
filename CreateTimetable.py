@@ -195,8 +195,11 @@ class CreateTimetableWindow(QWidget):
         course_title = self.course_title_input.text()
         course_code = self.course_code_input.text()
         classroom = self.classroom_input.text()
-        start_time = self.start_time_input.time().toString('HH:mm')
-        end_time = self.end_time_input.time().toString('HH:mm')
+
+        # Convert start and end times to 12-hour format with AM/PM
+        start_time = self.start_time_input.time().toString('hh:mm AP')  # 12-hour format with AM/PM
+        end_time = self.end_time_input.time().toString('hh:mm AP')  # 12-hour format with AM/PM
+
         session = self.session_combo.currentText()
 
         if not department or not semester or not teacher or not course_title or not course_code or not classroom:
@@ -230,6 +233,7 @@ class CreateTimetableWindow(QWidget):
             self.clear_inputs()
         except Exception as e:
             QMessageBox.critical(self, "Database Error", f"An error occurred: {e}")
+
 
     def clear_inputs(self):
         self.department_input.clear()
