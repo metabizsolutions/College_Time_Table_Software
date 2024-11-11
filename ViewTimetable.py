@@ -4,7 +4,7 @@ from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QTableWidget,
                              QTableWidgetItem, QPushButton, QLabel,
                              QMessageBox, QApplication, QFormLayout, 
                              QLineEdit, QHeaderView, QComboBox, QHBoxLayout, QFileDialog,QTimeEdit)
-from PyQt5.QtCore import pyqtSignal, Qt, QRect,QTime
+from PyQt5.QtCore import pyqtSignal, Qt, QRect, QTime, QColor
 from PyQt5.QtPrintSupport import QPrinter, QPrintDialog
 from PyQt5.QtGui import QPainter, QFont,QPen
 from datetime import datetime
@@ -197,11 +197,8 @@ class ViewTimetableWindow(QWidget):
 
         # Define margins and available width
         margin_left = 50
-<<<<<<< Updated upstream
         margin_top = 650
-=======
         margin_top = 300
->>>>>>> Stashed changes
         page_width = printer.pageRect().width() - 2 * margin_left
         page_height = printer.pageRect().height() - 2 * margin_top
         row_height = 600  # Set a fixed row height for all rows
