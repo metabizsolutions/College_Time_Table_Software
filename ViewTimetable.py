@@ -197,7 +197,7 @@ class ViewTimetableWindow(QWidget):
 
         # Define margins and available width
         margin_left = 50
-        margin_top = 50
+        margin_top = 650
         page_width = printer.pageRect().width() - 2 * margin_left
         page_height = printer.pageRect().height() - 2 * margin_top
         row_height = 600  # Set a fixed row height for all rows
