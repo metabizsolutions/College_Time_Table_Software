@@ -1,12 +1,12 @@
 import sys
 import sqlite3
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QTableWidget, 
-                             QTableWidgetItem, QPushButton, QLabel, 
+                             QTableWidgetItem, QPushButton, QLabel,
                              QMessageBox, QApplication, QFormLayout, 
                              QLineEdit, QHeaderView, QComboBox, QHBoxLayout, QFileDialog,QTimeEdit)
 from PyQt5.QtCore import pyqtSignal, Qt, QRect,QTime
 from PyQt5.QtPrintSupport import QPrinter, QPrintDialog
-from PyQt5.QtGui import QPainter, QFont
+from PyQt5.QtGui import QPainter, QFont,QPen
 from datetime import datetime
 
 def fetch_query_results(query, params=()):
@@ -286,10 +286,19 @@ class ViewTimetableWindow(QWidget):
                 # Draw the text inside the cell with word wrapping enabled
                 painter.drawText(cell_rect, text_options, text)
 
-                # Draw the cell borders
+                # Create a QPen with a thicker width for bold borders
+                bold_pen = QPen(Qt.black)  # Use a black color for the borders; change if needed
+                bold_pen.setWidth(3)  # Set the border width; adjust as desired for boldness
+
+                # Set the pen on the painter
+                painter.setPen(bold_pen)
+
+                # Draw the cell borders with the bold pen
                 painter.drawRect(cell_rect)
 
+                # Increment x_position as before to move to the next cell
                 x_position += col_widths[column - 1]
+
 
             # After processing all columns in the row, move the y-position down by the fixed row height
             y_position += row_height  # Move to the next row
