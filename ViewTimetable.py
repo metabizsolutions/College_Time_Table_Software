@@ -218,11 +218,29 @@ class ViewTimetableWindow(QWidget):
         pdf_canvas = canvas.Canvas(file_path, pagesize=landscape(A4))
         pdf_canvas.setTitle("Filtered Timetable")
 
-        # Title
-        pdf_canvas.setFont("Helvetica-Bold", 16)
+        # Title - College Name in large bold font
+        pdf_canvas.setFont("Helvetica-Bold", 22)  # H1-like font size for the title
         y_position = page_height - 40
-        pdf_canvas.drawString(page_width / 2 - 50, y_position, "Filtered Timetable Data")
+        pdf_canvas.drawCentredString(page_width / 2, y_position, "Government Graduate College Muzaffargarh")
+
+        # Subtitle - Department, Semester, Teacher, and Session details in smaller font
+        pdf_canvas.setFont("Helvetica-Bold", 10)
         y_position -= 30
+
+        # Get the selected filters
+        department = self.department_filter.currentText()
+        semester = self.semester_filter.currentText()
+        teacher = self.teacher_filter.currentText()  # Assuming teacher filter is present
+        session = self.session_filter.currentText()  # Assuming session filter has been added
+
+        # Construct the subtitle string based on selected filters
+        subtitle_text = f"Department: {department} | Semester: {semester} | Teacher: {teacher} | Session: {session}"
+        pdf_canvas.drawCentredString(page_width / 2, y_position, subtitle_text)
+
+        # Adjust y_position for the following content
+        y_position -= 30
+
+
 
         # Table headers (without the 'ID' column)
         headers = ['Department', 'Semester', 'Teacher', 'Course Title', 'Course Code', 
