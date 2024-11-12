@@ -80,9 +80,9 @@ class ViewTimetableWindow(QWidget):
         self.session_filter.currentIndexChanged.connect(self.apply_filters)  # Connect session filter
 
         self.layout.addLayout(self.filter_layout)
-
+        ##
         # Print Button
-        self.print_button = QPushButton("Print to PDF", self)
+        self.print_button = QPushButton("Print To PDF", self)
         self.print_button.clicked.connect(self.print_to_pdf)
         self.layout.addWidget(self.print_button)
 
