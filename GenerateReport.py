@@ -47,7 +47,7 @@ class GenerateReportWindow(QWidget):
             "Lecture 3", "Lecture 4", "Lecture 5", "Lecture 6", 
             "Lecture 7", "Lecture 8"
         ])
-        self.timetable_table.setVerticalHeaderLabels([f"Row {i+1}" for i in range(5)])  # Placeholder labels
+        self.timetable_table.setVerticalHeaderLabels([f"Dpt. {i+1}" for i in range(5)])  # Placeholder labels
         self.timetable_table.setEditTriggers(QTableWidget.NoEditTriggers)  # Make cells non-editable
         self.timetable_table.setAlternatingRowColors(True)  # Alternate row colors for readability
 
@@ -56,10 +56,18 @@ class GenerateReportWindow(QWidget):
         for row in range(5):  # For all rows
             self.timetable_table.setRowHeight(row, row_height)
 
-        # Set the width for each column
-        column_width = 140  # Adjust the width as needed
-        for col in range(10):  # For all columns
-            self.timetable_table.setColumnWidth(col, column_width)
+        # Set the width for each column individually
+        self.timetable_table.setColumnWidth(0, 200)  # Department column
+        self.timetable_table.setColumnWidth(1, 80)  # Classroom column
+        self.timetable_table.setColumnWidth(2, 120)  # Lecture 1
+        self.timetable_table.setColumnWidth(3, 120)  # Lecture 2
+        self.timetable_table.setColumnWidth(4, 120)  # Lecture 3
+        self.timetable_table.setColumnWidth(5, 120)  # Lecture 4
+        self.timetable_table.setColumnWidth(6, 120)  # Lecture 5
+        self.timetable_table.setColumnWidth(7, 120)  # Lecture 6
+        self.timetable_table.setColumnWidth(8, 120)  # Lecture 7
+        self.timetable_table.setColumnWidth(9, 120)  # Lecture 8
+
 
         self.main_layout.addWidget(self.timetable_table)
         self.setLayout(self.main_layout)
