@@ -13,10 +13,6 @@ from reportlab.pdfgen import canvas
 from PyQt5.QtWidgets import QMessageBox, QFileDialog
 from reportlab.lib.pagesizes import landscape
 import textwrap
-from reportlab.lib.pagesizes import A4, landscape
-from reportlab.pdfgen import canvas
-from reportlab.lib import colors
-from reportlab.lib.utils import simpleSplit
 from fpdf import FPDF
 from reportlab.lib.pagesizes import A4, landscape
 from fpdf import FPDF
@@ -60,8 +56,6 @@ class ViewTimetableWindow(QWidget):
         self.semester_filter.addItem("All Semesters")
         self.teacher_filter = QComboBox(self)
         self.teacher_filter.addItem("All Teachers")
-        self.session_filter = QComboBox(self)  # Session filter
-        self.session_filter.addItem("All Sessions")
 
         self.filter_layout.addWidget(QLabel("Department:", self))
         self.filter_layout.addWidget(self.department_filter)
@@ -69,25 +63,23 @@ class ViewTimetableWindow(QWidget):
         self.filter_layout.addWidget(self.semester_filter)
         self.filter_layout.addWidget(QLabel("Teacher:", self))
         self.filter_layout.addWidget(self.teacher_filter)
-        self.filter_layout.addWidget(QLabel("Session:", self))  # Add session label
-        self.filter_layout.addWidget(self.session_filter)        # Add session filter ComboBox
         
         # Connect filter change to filtering function
         self.department_filter.currentIndexChanged.connect(self.apply_filters)
         self.semester_filter.currentIndexChanged.connect(self.apply_filters)
         self.teacher_filter.currentIndexChanged.connect(self.apply_filters)
-        self.session_filter.currentIndexChanged.connect(self.apply_filters)  # Connect session filter
-
+        
         self.layout.addLayout(self.filter_layout)
 
         # Print Button
-        self.print_button = QPushButton("Print to Word", self)
+        self.print_button = QPushButton("Print to PDF", self)
         self.print_button.clicked.connect(self.print_to_pdf)
         self.layout.addWidget(self.print_button)
 
         # Debug label
         self.debug_label = QLabel("Loading timetable data...", self)
         self.layout.addWidget(self.debug_label)
+
 
         # Table widget
         self.table_widget = QTableWidget(self)
@@ -117,11 +109,6 @@ class ViewTimetableWindow(QWidget):
             for teacher in teachers:
                 self.teacher_filter.addItem(teacher[0])
 
-            # Populate Session filter
-            sessions = fetch_query_results("SELECT DISTINCT Session FROM Timetable")
-            for session in sessions:
-                self.session_filter.addItem(session[0])
-
         except Exception as e:
             self.debug_label.setText(f"Error loading filter options: {e}")
 
@@ -140,13 +127,11 @@ class ViewTimetableWindow(QWidget):
         except Exception as e:
             self.debug_label.setText(f"Error loading timetable: {e}")
 
-
     def apply_filters(self):
         """Apply the selected filters and update the table display."""
         department = self.department_filter.currentText()
         semester = self.semester_filter.currentText()
         teacher = self.teacher_filter.currentText()
-        session = self.session_filter.currentText()
 
         # Build query with filters
         query = "SELECT * FROM Timetable WHERE 1=1"
@@ -163,10 +148,6 @@ class ViewTimetableWindow(QWidget):
         if teacher != "All Teachers":
             query += " AND Teacher = ?"
             params.append(teacher)
-        
-        if session != "All Sessions":
-            query += " AND Session = ?"
-            params.append(session)
 
         try:
             results = fetch_query_results(query, params)
@@ -174,7 +155,6 @@ class ViewTimetableWindow(QWidget):
 
         except Exception as e:
             self.debug_label.setText(f"Error applying filters: {e}")
-
 
     def populate_table(self, results):
         """Populate the table widget with the provided results."""
@@ -205,118 +185,85 @@ class ViewTimetableWindow(QWidget):
 
 
 
-    def print_to_pdf(self):
-        """Prints the filtered timetable data to a landscape A4 PDF with text wrapping and auto-incrementing cell heights."""
-        file_dialog = QFileDialog(self)
-        file_path, _ = file_dialog.getSaveFileName(self, "Save PDF", "", "PDF Files (*.pdf)")
-
-        if not file_path:
-            return  # User canceled the save dialog
-
-        # Set up PDF in landscape A4
-        page_width, page_height = landscape(A4)
-        pdf_canvas = canvas.Canvas(file_path, pagesize=landscape(A4))
-        pdf_canvas.setTitle("Filtered Timetable")
-
-        # Title - College Name in large bold font
-        pdf_canvas.setFont("Helvetica-Bold", 22)  # H1-like font size for the title
-        y_position = page_height - 40
-        pdf_canvas.drawCentredString(page_width / 2, y_position, "Government Graduate College Muzaffargarh")
-
-        # Subtitle - Department, Semester, Teacher, and Session details in smaller font
-        pdf_canvas.setFont("Helvetica-Bold", 10)
-        y_position -= 30
-
-        # Get the selected filters
-        department = self.department_filter.currentText()
-        semester = self.semester_filter.currentText()
-        teacher = self.teacher_filter.currentText()  # Assuming teacher filter is present
-        session = self.session_filter.currentText()  # Assuming session filter has been added
-
-        # Construct the subtitle string based on selected filters
-        subtitle_text = f"Department: {department} | Semester: {semester} | Teacher: {teacher} | Session: {session}"
-        pdf_canvas.drawCentredString(page_width / 2, y_position, subtitle_text)
-
-        # Adjust y_position for the following content
-        y_position -= 30
 
 
 
-        # Table headers (without the 'ID' column)
-        headers = ['Department', 'Semester', 'Teacher', 'Course Title', 'Course Code', 
-                'Classroom', 'Start Time', 'End Time', 'Session']
-        pdf_canvas.setFont("Helvetica-Bold", 10)
 
-        # Calculate column width to fit across the landscape page
-        x_margin = 40
-        col_width = (page_width - 2 * x_margin) / len(headers)
+
+
+    def get_timetable_data(self, department, semester):
+        # Connect to the database
+        connection = sqlite3.connect("timetable.db")  # Using the correct database file
+        cursor = connection.cursor()
         
-        # Draw table headers with borders
-        x_position = x_margin
-        for header in headers:
-            pdf_canvas.drawString(x_position + 2, y_position - 12, header)
-            pdf_canvas.rect(x_position, y_position - 18, col_width, 20, stroke=1, fill=0)  # Header cell border
-            x_position += col_width
-        y_position -= 20
+        # SQL query to fetch timetable data for the specified department and semester
+        query = """
+        SELECT teacher, course_title, course_code, classroom, lecture_start_time, lecture_end_time
+        FROM Timetable
+        WHERE department = ? AND semester = ?
+        ORDER BY id
+        """
+        
+        cursor.execute(query, (department, semester))
+        results = cursor.fetchall()
+        
+        # Structure the fetched data
+        timetable_data = []
+        for row in results:
+            lecture_data = {
+                "teacher": row[0],
+                "course_title": row[1],
+                "course_code": row[2],
+                "classroom": row[3],
+                "start_time": row[4],
+                "end_time": row[5]
+            }
+            timetable_data.append(lecture_data)
+        
+        connection.close()
+        return timetable_data
 
-        # Table content (excluding 'ID' column data)
-        pdf_canvas.setFont("Helvetica", 9)
-        row_count = self.table_widget.rowCount()
-        column_count = len(headers)
+    def print_to_pdf(self):
+        # Get department and semester from the user
+        department, ok_dep = QInputDialog.getText(self, "Input Department", "Enter Department:")
+        semester, ok_sem = QInputDialog.getText(self, "Input Semester", "Enter Semester:")
+        
+        if not (ok_dep and ok_sem and department and semester):
+            QMessageBox.warning(self, "Invalid Input", "Department and Semester are required!")
+            return
 
-        for row in range(row_count):
-            x_position = x_margin
-            max_lines_in_row = 1  # Track max lines for consistent row height
+        # Retrieve timetable data using self.get_timetable_data
+        timetable_data = self.get_timetable_data(department, semester)
+        
+        if not timetable_data:
+            QMessageBox.warning(self, "No Data", "No timetable data available for the selected department and semester.")
+            return
+        
+        # Load the template Word file
+        template_path = os.path.join(os.getcwd(), "Template.docx")  # Assuming the template is in the same directory
+        if not os.path.exists(template_path):
+            QMessageBox.warning(self, "Template Not Found", "The template file 'Template.docx' was not found.")
+            return
 
-            # Calculate the height needed for the current row by determining max wrapped lines in any cell of this row
-            row_heights = []
-            for column in range(1, column_count + 1):  # Start from 1 to skip the ID column
-                cell_data = self.table_widget.item(row, column).text() if self.table_widget.item(row, column) else ""
-                wrapped_text = simpleSplit(cell_data, "Helvetica", 9, col_width - 4)  # Wrap text within cell width
-                row_heights.append(len(wrapped_text) * 12)  # Approximate height needed for this cell
-                max_lines_in_row = max(max_lines_in_row, len(wrapped_text))
+        doc = Document(template_path)
 
-            row_height = max(row_heights)  # Use the tallest cell as the row height
+        # Now iterate over the timetable data and replace the placeholders in the template
+        for i, row in enumerate(timetable_data):
+            # Replace placeholders in the template with actual data from the database
+            for paragraph in doc.paragraphs:
+                paragraph.text = paragraph.text.replace("{department}", department)
+                paragraph.text = paragraph.text.replace("{classroom}", row["classroom"])
+                paragraph.text = paragraph.text.replace("{teacher}", row["teacher"])
+                paragraph.text = paragraph.text.replace("{course_title}", row["course_title"])
+                paragraph.text = paragraph.text.replace("{course_code}", row["course_code"])
+                paragraph.text = paragraph.text.replace("{start_time}", row["start_time"])
+                paragraph.text = paragraph.text.replace("{end_time}", row["end_time"])
 
-            # Now draw each cell's wrapped text within the calculated row height
-            for column in range(1, column_count + 1):
-                cell_data = self.table_widget.item(row, column).text() if self.table_widget.item(row, column) else ""
-                wrapped_text = simpleSplit(cell_data, "Helvetica", 9, col_width - 4)
-
-                # Draw each line of wrapped text within the cell
-                for line_index, line in enumerate(wrapped_text):
-                    pdf_canvas.drawString(x_position + 2, y_position - 12 - (line_index * 10), line)
-
-                # Draw cell border for each cell with dynamic height
-                pdf_canvas.rect(x_position, y_position - row_height, col_width, row_height, stroke=1, fill=0)
-                x_position += col_width
-
-            # Move y_position down based on max lines in this row to keep rows consistent
-            y_position -= row_height
-
-            # Check if we need to create a new page
-            if y_position < 40:
-                pdf_canvas.showPage()
-                pdf_canvas.setFont("Helvetica", 9)
-                y_position = page_height - 40
-
-        pdf_canvas.save()
-        QMessageBox.information(self, "PDF Saved", "The timetable data was successfully saved to PDF.")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        # Save the modified document as a new .docx file
+        save_path, _ = QFileDialog.getSaveFileName(self, "Save Word File", "", "Word Files (*.docx)")
+        if save_path:
+            doc.save(save_path)
+            QMessageBox.information(self, "Success", "Timetable printed to Word file successfully!")
 
 
 
