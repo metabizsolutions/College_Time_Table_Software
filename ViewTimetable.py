@@ -1,13 +1,24 @@
 import sys
 import sqlite3
-from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QTableWidget, 
+from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QTableWidget, QInputDialog,
                              QTableWidgetItem, QPushButton, QLabel,
                              QMessageBox, QApplication, QFormLayout, 
                              QLineEdit, QHeaderView, QComboBox, QHBoxLayout, QFileDialog,QTimeEdit)
-from PyQt5.QtCore import pyqtSignal, Qt, QRect, QTime, QColor
+from PyQt5.QtCore import pyqtSignal, Qt, QRect,QTime
 from PyQt5.QtPrintSupport import QPrinter, QPrintDialog
 from PyQt5.QtGui import QPainter, QFont,QPen
 from datetime import datetime
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
+from PyQt5.QtWidgets import QMessageBox, QFileDialog
+from reportlab.lib.pagesizes import landscape
+import textwrap
+from fpdf import FPDF
+from reportlab.lib.pagesizes import A4, landscape
+from fpdf import FPDF
+from docx import Document
+import os
+
 
 def fetch_query_results(query, params=()):
     connection = sqlite3.connect('timetable.db')
@@ -61,8 +72,8 @@ class ViewTimetableWindow(QWidget):
         self.layout.addLayout(self.filter_layout)
 
         # Print Button
-        self.print_button = QPushButton("Print to PDF", self)
-        self.print_button.clicked.connect(self.print_to_pdf)
+        self.print_button = QPushButton("Print to Word", self)
+        self.print_button.clicked.connect(self.print_to_word)
         self.layout.addWidget(self.print_button)
 
         # Debug label
@@ -176,145 +187,153 @@ class ViewTimetableWindow(QWidget):
 
 
 
-    def print_to_pdf(self):
-        """Generate a PDF from the current table data."""
-        # Open file dialog for the user to choose a save location
-        options = QFileDialog.Options()
-        file_path, _ = QFileDialog.getSaveFileName(self, "Save PDF", "", "PDF Files (*.pdf);;All Files (*)", options=options)
+
+
+
+    def get_timetable_data(self, department, semester):
+        # Connect to the database
+        connection = sqlite3.connect("timetable.db")  # Using the correct database file
+        cursor = connection.cursor()
         
-        if not file_path:
-            return  # User cancelled the save operation
+        # SQL query to fetch timetable data for the specified department and semester
+        query = """
+        SELECT teacher, course_title, course_code, classroom, lecture_start_time, lecture_end_time
+        FROM Timetable
+        WHERE department = ? AND semester = ?
+        ORDER BY id
+        """
+        
+        cursor.execute(query, (department, semester))
+        results = cursor.fetchall()
+        
+        # Structure the fetched data
+        timetable_data = []
+        for row in results:
+            lecture_data = {
+                "teacher": row[0],
+                "course_title": row[1],
+                "course_code": row[2],
+                "classroom": row[3],
+                "start_time": row[4],
+                "end_time": row[5]
+            }
+            timetable_data.append(lecture_data)
+        
+        connection.close()
+        return timetable_data
 
-        # Initialize printer
-        printer = QPrinter(QPrinter.HighResolution)
-        printer.setOutputFormat(QPrinter.PdfFormat)
-        printer.setPaperSize(QPrinter.A4)
-        printer.setOutputFileName(file_path)
+    def print_to_word(self):
+        # Get department and semester from the user
+        department, ok_dep = QInputDialog.getText(self, "Input Department", "Enter Department:")
+        semester, ok_sem = QInputDialog.getText(self, "Input Semester", "Enter Semester:")
+        
+        if not (ok_dep and ok_sem and department and semester):
+            QMessageBox.warning(self, "Invalid Input", "Department and Semester are required!")
+            return
 
-        # Set up QPainter to draw the table data
-        painter = QPainter(printer)
-        painter.begin(printer)
+        # Retrieve timetable data using self.get_timetable_data
+        timetable_data = self.get_timetable_data(department, semester)
+        
+        if not timetable_data:
+            QMessageBox.warning(self, "No Data", "No timetable data available for the selected department and semester.")
+            return
+        
+        # Load the template Word file
+        template_path = os.path.join(os.getcwd(), "Template.docx")  # Assuming the template is in the same directory
+        if not os.path.exists(template_path):
+            QMessageBox.warning(self, "Template Not Found", "The template file 'Template.docx' was not found.")
+            return
 
-        # Define margins and available width
-        margin_left = 50
-        margin_top = 650
-        margin_top = 300
-        page_width = printer.pageRect().width() - 2 * margin_left
-        page_height = printer.pageRect().height() - 2 * margin_top
-        row_height = 600  # Set a fixed row height for all rows
-        col_widths = [1200, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000]  # Set column widths dynamically
-        y_position = margin_top
+        doc = Document(template_path)
 
-        # Set title font
-        painter.setFont(QFont("Arial", 14, QFont.Bold))
+        # Now iterate over the timetable data and replace the placeholders in the template
+        for i, row in enumerate(timetable_data):
+            # Replace placeholders in the template with actual data from the database
+            for paragraph in doc.paragraphs:
+                paragraph.text = paragraph.text.replace("{department}", department)
+                paragraph.text = paragraph.text.replace("{classroom}", row["classroom"])
+                paragraph.text = paragraph.text.replace("{teacher}", row["teacher"])
+                paragraph.text = paragraph.text.replace("{course_title}", row["course_title"])
+                paragraph.text = paragraph.text.replace("{course_code}", row["course_code"])
+                paragraph.text = paragraph.text.replace("{start_time}", row["start_time"])
+                paragraph.text = paragraph.text.replace("{end_time}", row["end_time"])
 
-        # Calculate the width of the title text
-        title_text = "Timetable"
-        font_metrics = painter.fontMetrics()
-        title_width = font_metrics.horizontalAdvance(title_text)
-
-        # Calculate the x-position to center the text
-        x_position = (page_width - title_width) / 2
-        x_position = int(x_position)
-        y_position = int(y_position)
-
-        # Draw the title centered
-        painter.drawText(x_position, y_position, title_text)
-
-        # Adjust y-position after the title
-        y_position += 350  # Space after the title
-
-        # Set header font
-        painter.setFont(QFont("Arial", 8, QFont.Bold))
-        x_position = margin_left
-        headers = [self.table_widget.horizontalHeaderItem(i).text() for i in range(1, self.table_widget.columnCount() - 2)]  # Exclude ID column
-        for i, header in enumerate(headers):
-            painter.drawText(x_position, y_position, header)
-            x_position += col_widths[i]
-        y_position += 450  # Space after headers
-
-        # Set normal font for table rows
-        painter.setFont(QFont("Arial", 9))
-
-        for row in range(self.table_widget.rowCount()):
-            x_position = margin_left
-
-            for column in range(1, self.table_widget.columnCount() - 2):  # Exclude ID column
-                item = self.table_widget.item(row, column)
-                text = item.text() if item else ""
-
-                # Format time columns in 12-hour format (if the column contains time data)
-                if "time" in text.lower():  # Check if the text represents time
-                    try:
-                        # Parse the time in 24-hour format (assuming 'HH:MM' format)
-                        time_obj = datetime.strptime(text, "%H:%M")  # 24-hour format
-                        text = time_obj.strftime("%I:%M %p")  # Convert to 12-hour format (AM/PM)
-                    except ValueError:
-                        pass  # If it's not a valid time, leave it unchanged
-
-                # Check if the column represents start time, end time, or starting time
-                if "start_time" in self.table_widget.horizontalHeaderItem(column).text().lower():
-                    # Format start time
-                    try:
-                        time_obj = datetime.strptime(text, "%H:%M")
-                        text = time_obj.strftime("%I:%M %p")  # 12-hour format (AM/PM)
-                    except ValueError:
-                        pass
-                elif "end_time" in self.table_widget.horizontalHeaderItem(column).text().lower():
-                    # Format end time
-                    try:
-                        time_obj = datetime.strptime(text, "%H:%M")
-                        text = time_obj.strftime("%I:%M %p")  # 12-hour format (AM/PM)
-                    except ValueError:
-                        pass
-                elif "classroom" in self.table_widget.horizontalHeaderItem(column).text().lower():
-                    # Leave the classroom text unchanged
-                    pass
-                elif "starting_time" in self.table_widget.horizontalHeaderItem(column).text().lower():
-                    # Format the starting time if it's a time column
-                    try:
-                        time_obj = datetime.strptime(text, "%H:%M")
-                        text = time_obj.strftime("%I:%M %p")  # 12-hour format (AM/PM)
-                    except ValueError:
-                        pass
-
-                # Set the word wrap for text drawing and center the text in the cell
-                text_options = Qt.TextWordWrap | Qt.AlignCenter  # Align text horizontally and vertically in the center
-
-                # Define the rectangle for the cell with fixed row height
-                cell_rect = QRect(x_position, y_position, col_widths[column - 1], row_height)
-
-                # Draw the text inside the cell with word wrapping enabled
-                painter.drawText(cell_rect, text_options, text)
-
-                # Create a QPen with a thicker width for bold borders
-                bold_pen = QPen(Qt.black)  # Use a black color for the borders; change if needed
-                bold_pen.setWidth(3)  # Set the border width; adjust as desired for boldness
-
-                # Set the pen on the painter
-                painter.setPen(bold_pen)
-
-                # Draw the cell borders with the bold pen
-                painter.drawRect(cell_rect)
-
-                # Increment x_position as before to move to the next cell
-                x_position += col_widths[column - 1]
+        # Save the modified document as a new .docx file
+        save_path, _ = QFileDialog.getSaveFileName(self, "Save Word File", "", "Word Files (*.docx)")
+        if save_path:
+            doc.save(save_path)
+            QMessageBox.information(self, "Success", "Timetable printed to Word file successfully!")
 
 
-            # After processing all columns in the row, move the y-position down by the fixed row height
-            y_position += row_height  # Move to the next row
 
-            # Check if we need to fit the table in multiple pages
-            if y_position > page_height - row_height:
-                painter.end()
-                printer.newPage()  # Start a new page
-                painter.begin(printer)
-                y_position = margin_top  # Reset the position for the new page
 
-        painter.end()  # End the painting process
 
-        # Display success message
-        QMessageBox.information(self, "Success", f"PDF saved successfully at {file_path}")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
+
+
+
+
+
+
+
+
+
+
 
 
 
