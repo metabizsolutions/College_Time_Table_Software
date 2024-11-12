@@ -1,4 +1,4 @@
-@ -1,525 +1,543 @@
+
 import sys
 import sqlite3
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QTableWidget, QInputDialog,
