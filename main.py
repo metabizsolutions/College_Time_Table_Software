@@ -14,6 +14,11 @@ from PyQt5.QtWidgets import QMessageBox
 from PyQt5.QtWidgets import QComboBox, QMessageBox, QFormLayout, QScrollArea
 import sqlite3
 from database import create_database
+from PyQt5.QtWidgets import QWidget, QPushButton, QVBoxLayout
+from GenerateReport import GenerateReportWindow
+
+
+
 
 class MainApp(QtWidgets.QWidget):
     def __init__(self):
@@ -92,6 +97,12 @@ class MainApp(QtWidgets.QWidget):
         self.create_timetable_button.setStyleSheet(button_style)
         self.create_timetable_button.clicked.connect(self.open_create_timetable_window)
         self.button_layout.addWidget(self.create_timetable_button)
+
+        # Add the new button for report generation
+        self.generate_report_button = QtWidgets.QPushButton("Generate Report")
+        self.generate_report_button.setStyleSheet(button_style)
+        self.generate_report_button.clicked.connect(self.open_generate_report_window)
+        self.button_layout.addWidget(self.generate_report_button)
 
     
         # Add the button widget to the main layout
@@ -501,6 +512,11 @@ class MainApp(QtWidgets.QWidget):
     def open_create_timetable_window(self):
         self.create_timetable_window = CreateTimetableWindow()  # Open the create timetable window
         self.create_timetable_window.show()
+
+    def open_generate_report_window(self):
+        # Create an instance of GenerateReportWindow and show it
+        self.generate_report_window = GenerateReportWindow()
+        self.generate_report_window.show()
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication([])
