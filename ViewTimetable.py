@@ -82,7 +82,7 @@ class ViewTimetableWindow(QWidget):
         self.layout.addLayout(self.filter_layout)
 
         # Print Button
-        self.print_button = QPushButton("Print to Word", self)
+        self.print_button = QPushButton("Print to PDF", self)
         self.print_button.clicked.connect(self.print_to_pdf)
         self.layout.addWidget(self.print_button)
 
