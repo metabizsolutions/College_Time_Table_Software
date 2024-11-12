@@ -516,7 +516,7 @@ class MainApp(QtWidgets.QWidget):
     def open_generate_report_window(self):
         # Create an instance of GenerateReportWindow and show it
         self.generate_report_window = GenerateReportWindow()
-        self.generate_report_window.show()
+        self.generate_report_window.showMaximized()
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication([])
