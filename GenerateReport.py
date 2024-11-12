@@ -1,9 +1,24 @@
+import sqlite3
 import sys
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QFormLayout, QComboBox, QLabel, 
     QPushButton, QTableWidget, QTableWidgetItem, QMessageBox
 )
+
+from reportlab.lib.pagesizes import A4, landscape
+from reportlab.pdfgen import canvas
+from reportlab.platypus import Table, TableStyle, Paragraph
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet
 from PyQt5.QtCore import Qt
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.units import cm
+from reportlab.pdfgen import canvas
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.platypus import Paragraph, Table, TableStyle
 from database import fetch_query_results  # Import the fetch_query_results function
 
 class GenerateReportWindow(QWidget):
@@ -68,11 +83,69 @@ class GenerateReportWindow(QWidget):
         self.timetable_table.setColumnWidth(8, 120)  # Lecture 7
         self.timetable_table.setColumnWidth(9, 120)  # Lecture 8
 
+        # Add Print to PDF button
+        self.print_button = QPushButton("Print to PDF")
+        self.print_button.clicked.connect(self.print_to_pdf)
+        self.main_layout.addWidget(self.print_button)
 
         self.main_layout.addWidget(self.timetable_table)
         self.setLayout(self.main_layout)
 
     # Rest of the methods remain unchanged...
+
+
+
+    def print_to_pdf(self):
+        """Print the current timetable in a PDF with headers and wrapped text."""
+            # Get the selected semester
+        semester = self.semester_combo.currentText()
+        
+        # Define the title to be added
+        title = f"TIME TABLE BS {semester} MORNING PROGRAM\nGOVERNMENT GRADUATE COLLEGE MUZAFFARGARH"
+        pdf_file = "timetable_report.pdf"
+        c = canvas.Canvas(pdf_file, pagesize=landscape(A4))
+
+        # Define row height and column widths for a simple, standard layout
+        row_height = 2.5 * cm
+        col_widths = [3 * cm, 2 * cm] + [2.5 * cm] * 8  # Adjust as needed
+
+        # Style for wrapped text
+        style = getSampleStyleSheet()['BodyText']
+        style.fontSize = 8  # Font size for cells and headers
+
+        # Fetch headers and content from the QTableWidget
+        headers = [Paragraph(f"<b>{self.timetable_table.horizontalHeaderItem(i).text()}</b>", style) 
+                for i in range(self.timetable_table.columnCount())]  # Wrap headers in bold
+        data = [headers]  # Start with headers
+
+        for row in range(self.timetable_table.rowCount()):
+            row_data = []
+            for col in range(self.timetable_table.columnCount()):
+                item = self.timetable_table.item(row, col)
+                cell_text = item.text() if item else ""
+                wrapped_text = Paragraph(cell_text, style)  # Wrap text within the cell
+                row_data.append(wrapped_text)
+            data.append(row_data)
+
+        # Create a simple table with just cell borders
+        table = Table(data, colWidths=col_widths, rowHeights=row_height)
+        table.setStyle(TableStyle([
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.black),  # Simple grid around all cells
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),  # Bold font for headers
+            ('FONTSIZE', (0, 0), (-1, -1), 8),  # Font size for all cells
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),  # Vertically center-align all cells
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),  # Horizontally center-align all cells
+        ]))
+
+        # Position and draw the table on the canvas
+        width, height = landscape(A4)
+        table.wrapOn(c, width, height)
+        table.drawOn(c, 2 * cm, height - (len(data) + 1) * row_height)  # Adjust positioning as needed
+
+        # Save the PDF
+        c.save()
+        QMessageBox.information(self, "PDF Saved", f"Timetable saved as '{pdf_file}'")
+
 
 
 
