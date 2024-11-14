@@ -187,6 +187,14 @@ class CreateTimetableWindow(QWidget):
     def select_item(self, input_field, list_widget, item):
         input_field.setText(item.text())
         list_widget.clear()
+    def is_course_unique(self, course_title, course_code, department, semester):
+        query = """
+        SELECT * FROM Timetable 
+        WHERE course_title = ? AND course_code = ? AND department = ? AND semester = ?
+        """
+        self.cursor.execute(query, (course_title, course_code, department, semester))
+        return bool(self.cursor.fetchall())
+
 
     def submit_data(self):
         department = self.department_input.text()
@@ -206,7 +214,7 @@ class CreateTimetableWindow(QWidget):
             QMessageBox.warning(self, "Input Error", "Please fill in all the fields.")
             return
 
-        if start_time >= end_time:
+        if start_time <= end_time:
             QMessageBox.warning(self, "Time Error", "End time must be later than start time.")
             return
 
@@ -218,8 +226,8 @@ class CreateTimetableWindow(QWidget):
             QMessageBox.warning(self, "Classroom Conflict", f"This classroom is already assigned during this time.")
             return
 
-        if self.is_course_unique(course_title, course_code, semester):
-            QMessageBox.warning(self, "Course Conflict", f"This course title and code already exist for the selected semester.")
+        if self.is_course_unique(course_title, course_code, department, semester):
+            QMessageBox.warning(self, "Course Conflict", f"This course title and code already exist for the selected department and semester.")
             return
 
         try:
@@ -233,6 +241,7 @@ class CreateTimetableWindow(QWidget):
             self.clear_inputs()
         except Exception as e:
             QMessageBox.critical(self, "Database Error", f"An error occurred: {e}")
+
 
 
     def clear_inputs(self):
