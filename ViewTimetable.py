@@ -23,6 +23,8 @@ from reportlab.lib.pagesizes import A4, landscape
 from fpdf import FPDF
 from docx import Document
 import os
+from docx.shared import Pt
+
 
 
 def fetch_query_results(query, params=()):
@@ -83,7 +85,7 @@ class ViewTimetableWindow(QWidget):
         ##
         # Print Button
         self.print_button = QPushButton("Print To PDF", self)
-        self.print_button.clicked.connect(self.print_to_pdf)
+        self.print_button.clicked.connect(self.generate_timetable_report)
         self.layout.addWidget(self.print_button)
 
         # Debug label
@@ -206,104 +208,90 @@ class ViewTimetableWindow(QWidget):
 
 
 
-    def print_to_pdf(self):
-        """Prints the filtered timetable data to a landscape A4 PDF with text wrapping and auto-incrementing cell heights."""
-        file_dialog = QFileDialog(self)
-        file_path, _ = file_dialog.getSaveFileName(self, "Save PDF", "", "PDF Files (*.pdf)")
+            from docx import Document
+            from PyQt5.QtWidgets import QFileDialog, QMessageBox
 
+        from docx.shared import Pt
+        from docx.enum.table import WD_ALIGN_VERTICAL
+        from PyQt5.QtWidgets import QFileDialog, QMessageBox
+        from docx import Document
+        import sqlite3  # Assuming you are using SQLite for your database
+
+    def generate_timetable_report(self):
+        """Generates the timetable report by applying data to a Word template."""
+        
+        # Prompt user to save the output
+        file_dialog = QFileDialog(self)
+        file_path, _ = file_dialog.getSaveFileName(self, "Save Report", "", "Word Files (*.docx)")
+        
         if not file_path:
             return  # User canceled the save dialog
 
-        # Set up PDF in landscape A4
-        page_width, page_height = landscape(A4)
-        pdf_canvas = canvas.Canvas(file_path, pagesize=landscape(A4))
-        pdf_canvas.setTitle("Filtered Timetable")
+        # Load the Word template
+        doc = Document("C:/Users/Muhammad Haseeb/Documents/GitHub/College_Time_Table_Software/VBA.docx")
 
-
-        # Title - College Name in large bold font
-        pdf_canvas.setFont("Helvetica-Bold", 22)  # H1-like font size for the title
-        y_position = page_height - 40
-        pdf_canvas.drawCentredString(page_width / 2, y_position, "Government Graduate College Muzaffargarh")
-
-        # Subtitle - Department, Semester, Teacher, and Session details in smaller font
-        pdf_canvas.setFont("Helvetica-Bold", 10)
-        y_position -= 30
-
-        # Get the selected filters
+        # Get selected filters
         department = self.department_filter.currentText()
         semester = self.semester_filter.currentText()
-        teacher = self.teacher_filter.currentText()  # Assuming teacher filter is present
-        session = self.session_filter.currentText()  # Assuming session filter has been added
+        teacher = self.teacher_filter.currentText()
+        session = self.session_filter.currentText()
 
-        # Construct the subtitle string based on selected filters
-        subtitle_text = f"Department: {department} | Semester: {semester} | Teacher: {teacher} | Session: {session}"
-        pdf_canvas.drawCentredString(page_width / 2, y_position, subtitle_text)
+        # Define placeholders and replacements
+        replacements = {
+            "{{Department}}": department,
+            "{{Semester}}": semester,
+            "{{Teacher}}": teacher,
+            "{{Session}}": session,
+        }
 
-        # Adjust y_position for the following content
-        y_position -= 30
+        # Replace placeholders in the document
+        for paragraph in doc.paragraphs:
+            for placeholder, replacement in replacements.items():
+                if placeholder in paragraph.text:
+                    paragraph.text = paragraph.text.replace(placeholder, replacement)
 
+        # Fetch timetable data from the database
+        connection = sqlite3.connect('timetable.db')  # Update with your database path
+        cursor = connection.cursor()
 
+        query = """
+        SELECT department, semester, teacher, course_title, course_code, classroom, 
+            lecture_start_time, lecture_end_time, session
+        FROM Timetable
+        WHERE department = ? AND semester = ? AND teacher = ? AND session = ?
+    """
+        cursor.execute(query, (department, semester, teacher, session))
+        timetable_data = cursor.fetchall()
 
-        # Table headers (without the 'ID' column)
+        # Locate the table in the document (assuming the timetable is stored in the first table)
+        table = doc.tables[0]
+        
+        # Table headers (excluding 'ID' column)
         headers = ['Department', 'Semester', 'Teacher', 'Course Title', 'Course Code', 
                 'Classroom', 'Start Time', 'End Time', 'Session']
-        pdf_canvas.setFont("Helvetica-Bold", 10)
-
-        # Calculate column width to fit across the landscape page
-        x_margin = 40
-        col_width = (page_width - 2 * x_margin) / len(headers)
         
-        # Draw table headers with borders
-        x_position = x_margin
-        for header in headers:
-            pdf_canvas.drawString(x_position + 2, y_position - 12, header)
-            pdf_canvas.rect(x_position, y_position - 18, col_width, 20, stroke=1, fill=0)  # Header cell border
-            x_position += col_width
-        y_position -= 20
+        # Fill in timetable data
+        for data in timetable_data:
+            row = table.add_row().cells
+            for i, value in enumerate(data):
+                cell = row[i]
+                cell.text = str(value)
+                cell.paragraphs[0].paragraph_format.word_wrap = True  # Enable word wrap in the cell
+                cell.paragraphs[0].font.size = Pt(10)  # Optional: adjust font size
+                cell.alignment = WD_ALIGN_VERTICAL.CENTER  # Optional: center-align text vertically
 
-        # Table content (excluding 'ID' column data)
-        pdf_canvas.setFont("Helvetica", 9)
-        row_count = self.table_widget.rowCount()
-        column_count = len(headers)
+        # Apply auto-adjustment for column width
+        for col in table.columns:
+            for cell in col.cells:
+                cell.width = Pt(100)  # Adjust column width as needed
 
-        for row in range(row_count):
-            x_position = x_margin
-            max_lines_in_row = 1  # Track max lines for consistent row height
+        # Save the updated document
+        doc.save(file_path)
+        connection.close()
 
-            # Calculate the height needed for the current row by determining max wrapped lines in any cell of this row
-            row_heights = []
-            for column in range(1, column_count + 1):  # Start from 1 to skip the ID column
-                cell_data = self.table_widget.item(row, column).text() if self.table_widget.item(row, column) else ""
-                wrapped_text = simpleSplit(cell_data, "Helvetica", 9, col_width - 4)  # Wrap text within cell width
-                row_heights.append(len(wrapped_text) * 12)  # Approximate height needed for this cell
-                max_lines_in_row = max(max_lines_in_row, len(wrapped_text))
+        QMessageBox.information(self, "Report Saved", "The timetable report was successfully saved.")
 
-            row_height = max(row_heights)  # Use the tallest cell as the row height
 
-            # Now draw each cell's wrapped text within the calculated row height
-            for column in range(1, column_count + 1):
-                cell_data = self.table_widget.item(row, column).text() if self.table_widget.item(row, column) else ""
-                wrapped_text = simpleSplit(cell_data, "Helvetica", 9, col_width - 4)
-
-                # Draw each line of wrapped text within the cell
-                for line_index, line in enumerate(wrapped_text):
-                    pdf_canvas.drawString(x_position + 2, y_position - 12 - (line_index * 10), line)
-
-                # Draw cell border for each cell with dynamic height
-                pdf_canvas.rect(x_position, y_position - row_height, col_width, row_height, stroke=1, fill=0)
-                x_position += col_width
-
-            # Move y_position down based on max lines in this row to keep rows consistent
-            y_position -= row_height
-
-            # Check if we need to create a new page
-            if y_position < 40:
-                pdf_canvas.showPage()
-                pdf_canvas.setFont("Helvetica", 9)
-                y_position = page_height - 40
-
-        pdf_canvas.save()
-        QMessageBox.information(self, "PDF Saved", "The timetable data was successfully saved to PDF.")
 
 
 
