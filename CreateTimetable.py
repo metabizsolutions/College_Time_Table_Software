@@ -211,9 +211,10 @@ class CreateTimetableWindow(QWidget):
             QMessageBox.warning(self, "Input Error", "Please fill in all the fields.")
             return
 
-        if start_time >= end_time:
+        if self.start_time_input.time() >= self.end_time_input.time():
             QMessageBox.warning(self, "Time Error", "End time must be later than start time.")
             return
+
 
         if self.is_teacher_scheduled(teacher, start_time, end_time):
             QMessageBox.warning(self, "Schedule Conflict", f"This teacher is already scheduled during this time.")
