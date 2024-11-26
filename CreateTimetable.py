@@ -105,19 +105,24 @@ class CreateTimetableWindow(QWidget):
         # Time section layout
         time_layout = QHBoxLayout()
 
+        # Start Time
         start_time_label = QLabel("Select Lecture Start Time")
         start_time_label.setFont(QFont("Georgia", 12))
+        self.start_time_input.setDisplayFormat("hh:mm AP")  # 12-hour format with AM/PM
         self.start_time_input.setTime(QTime.currentTime())
         time_layout.addWidget(start_time_label)
         time_layout.addWidget(self.start_time_input)
 
+        # End Time
         end_time_label = QLabel("Select Lecture End Time")
         end_time_label.setFont(QFont("Georgia", 12))
+        self.end_time_input.setDisplayFormat("hh:mm AP")  # 12-hour format with AM/PM
         self.end_time_input.setTime(QTime.currentTime())
         time_layout.addWidget(end_time_label)
         time_layout.addWidget(self.end_time_input)
 
         self.form_layout.addRow(time_layout)
+
 
     def add_session_section(self):
         session_layout = QHBoxLayout()
@@ -204,9 +209,9 @@ class CreateTimetableWindow(QWidget):
         course_code = self.course_code_input.text()
         classroom = self.classroom_input.text()
 
-        # Convert start and end times to 12-hour format with AM/PM
         start_time = self.start_time_input.time().toString('hh:mm AP')  # 12-hour format with AM/PM
         end_time = self.end_time_input.time().toString('hh:mm AP')  # 12-hour format with AM/PM
+
 
         session = self.session_combo.currentText()
 
@@ -214,9 +219,14 @@ class CreateTimetableWindow(QWidget):
             QMessageBox.warning(self, "Input Error", "Please fill in all the fields.")
             return
 
+<<<<<<< HEAD
         if start_time <= end_time:
+=======
+        if self.start_time_input.time() >= self.end_time_input.time():
+>>>>>>> 590e71891f866f9022df01cb452738a79a2110fe
             QMessageBox.warning(self, "Time Error", "End time must be later than start time.")
             return
+
 
         if self.is_teacher_scheduled(teacher, start_time, end_time):
             QMessageBox.warning(self, "Schedule Conflict", f"This teacher is already scheduled during this time.")

@@ -24,8 +24,8 @@ class MainApp(QtWidgets.QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("College Timetable Management System")
-        self.setGeometry(200, 200, 800, 600)
-        self.showMaximized() 
+        self.showMaximized()
+        self.updateGeometry()
         create_database("timetable.db")
 
         # Set sky blue background
@@ -104,7 +104,11 @@ class MainApp(QtWidgets.QWidget):
         self.generate_report_button.clicked.connect(self.open_generate_report_window)
         self.button_layout.addWidget(self.generate_report_button)
 
-    
+        self.workload_button = QtWidgets.QPushButton("Workload")
+        self.workload_button.setStyleSheet(button_style)
+        self.workload_button.clicked.connect(self.open_workload_window)
+        self.button_layout.addWidget(self.workload_button)
+
         # Add the button widget to the main layout
         self.layout.addWidget(self.button_widget)
 
@@ -518,8 +522,13 @@ class MainApp(QtWidgets.QWidget):
         self.generate_report_window = GenerateReportWindow()
         self.generate_report_window.showMaximized()
 
+    def open_workload_window(self):
+        from workload import WorkloadWindow  # Import the workload window
+        self.workload_window = WorkloadWindow()
+        self.workload_window.showMaximized()        
+
 if __name__ == "__main__":
     app = QtWidgets.QApplication([])
     main_app = MainApp()
-    main_app.show()
+    main_app.showMaximized()
     app.exec_()
