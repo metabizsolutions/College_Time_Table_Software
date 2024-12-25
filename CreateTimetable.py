@@ -219,11 +219,7 @@ class CreateTimetableWindow(QWidget):
             QMessageBox.warning(self, "Input Error", "Please fill in all the fields.")
             return
 
-<<<<<<< HEAD
         if start_time <= end_time:
-=======
-        if self.start_time_input.time() >= self.end_time_input.time():
->>>>>>> 590e71891f866f9022df01cb452738a79a2110fe
             QMessageBox.warning(self, "Time Error", "End time must be later than start time.")
             return
 

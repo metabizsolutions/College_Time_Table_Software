@@ -8,7 +8,6 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import Qt
 from datetime import datetime
 
-
 # Simulated database query function
 def fetch_query_results(query, params=()):
     """Simulates fetching results from a database."""
@@ -18,7 +17,6 @@ def fetch_query_results(query, params=()):
     results = cursor.fetchall()
     connection.close()
     return results
-
 
 class GenerateReportWindow(QWidget):
     def __init__(self):
@@ -42,7 +40,7 @@ class GenerateReportWindow(QWidget):
         self.form_layout = QFormLayout()
         self.semester_label = QLabel("Select Semester:")
         self.semester_combo = QComboBox()
-        self.semester_combo.addItems(self.get_semesters())  # Fetch semesters dynamically
+        self.semester_combo.addItems(["All Semesters"] + self.get_semesters())  # Add "All Semesters"
         self.form_layout.addRow(self.semester_label, self.semester_combo)
 
         # Add form layout to the main layout
@@ -73,19 +71,31 @@ class GenerateReportWindow(QWidget):
     def generate_html_timetable(self):
         """Generate and open the timetable as an HTML file."""
         semester = self.semester_combo.currentText()
-        if not semester:
-            QMessageBox.warning(self, "Input Error", "Please select a semester.")
-            return
+        
+        if semester == "All Semesters":
+            # Fetch timetable data for all semesters
+            timetable_data = self.get_all_timetable_data()
 
-        # Fetch timetable data for the selected semester
-        timetable_data = self.get_departments_classrooms_and_courses_for_semester(semester)
+            if not timetable_data:
+                QMessageBox.warning(self, "No Data", "No data found for any semester.")
+                return
 
-        if not timetable_data:
-            QMessageBox.warning(self, "No Data", "No data found for the selected semester.")
-            return
+            # Generate the HTML content for all semesters
+            html_content = self.create_html_table(timetable_data, semester="All Semesters")
+        else:
+            if not semester:
+                QMessageBox.warning(self, "Input Error", "Please select a semester.")
+                return
 
-        # Generate the HTML content
-        html_content = self.create_html_table(timetable_data, semester)
+            # Fetch timetable data for the selected semester
+            timetable_data = self.get_departments_classrooms_and_courses_for_semester(semester)
+
+            if not timetable_data:
+                QMessageBox.warning(self, "No Data", "No data found for the selected semester.")
+                return
+
+            # Generate the HTML content for the selected semester
+            html_content = self.create_html_table(timetable_data, semester)
 
         # Save the HTML file
         file_name = "timetable.html"
@@ -95,9 +105,6 @@ class GenerateReportWindow(QWidget):
         # Open the HTML file in the default web browser
         webbrowser.open(file_name)
         QMessageBox.information(self, "Success", "Timetable generated and opened in your browser.")
-
-
-
 
     def create_html_table(self, data, semester):
         """Generate the HTML table structure."""
@@ -127,7 +134,7 @@ class GenerateReportWindow(QWidget):
             </style>
         </head>
         <body>
-            <h2>Timetable for Semester {semester}</h2>
+            <h2>Timetable for {semester}</h2>
             <h4>Government Graduate College Muzaffargarh</h4>
             <table>
                 <thead>
@@ -170,8 +177,6 @@ class GenerateReportWindow(QWidget):
         """
         return html
 
-
-
     def get_departments_classrooms_and_courses_for_semester(self, semester):
         """Fetch all timetable data for the selected semester."""
         query = """
@@ -183,13 +188,21 @@ class GenerateReportWindow(QWidget):
         """
         return fetch_query_results(query, (semester,))
 
+    def get_all_timetable_data(self):
+        """Fetch all timetable data for all semesters."""
+        query = """
+            SELECT department, classroom, course_title, course_code, teacher, 
+                   lecture_start_time, lecture_end_time
+            FROM Timetable 
+            ORDER BY semester, department, classroom, lecture_start_time
+        """
+        return fetch_query_results(query)
 
 def main():
     app = QApplication(sys.argv)
     window = GenerateReportWindow()
     window.showMaximized()  # Open the window in full-screen mode
     sys.exit(app.exec_())
-
 
 if __name__ == "__main__":
     main()
