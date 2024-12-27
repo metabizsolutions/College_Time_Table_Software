@@ -71,7 +71,7 @@ class WorkloadWindow(QWidget):
             total_lectures_item = QTableWidgetItem(str(total_lectures))
             workload_item = QTableWidgetItem(f"{workload:.2f}")
 
-            # Enable text wrapping for all items
+            # Enable text wrapping and adjust row height
             teacher_item.setTextAlignment(Qt.AlignTop)
             department_item.setTextAlignment(Qt.AlignTop)
             total_lectures_item.setTextAlignment(Qt.AlignTop)
@@ -82,18 +82,22 @@ class WorkloadWindow(QWidget):
             total_lectures_item.setFlags(total_lectures_item.flags() ^ Qt.ItemIsEditable)
             workload_item.setFlags(workload_item.flags() ^ Qt.ItemIsEditable)
 
+            # Enable word wrap
+            teacher_item.setFont(QFont("Georgia", 12))
+            department_item.setFont(QFont("Georgia", 12))
+            total_lectures_item.setFont(QFont("Georgia", 12))
+            workload_item.setFont(QFont("Georgia", 12))
+
             # Add items to the table
             self.workload_table.setItem(row_index, 0, teacher_item)
             self.workload_table.setItem(row_index, 1, department_item)
             self.workload_table.setItem(row_index, 2, total_lectures_item)
             self.workload_table.setItem(row_index, 3, workload_item)
 
-        # Fit table columns to window
-        self.workload_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.workload_table.resizeColumnsToContents()
+            # Resize columns and rows based on content
+            self.workload_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+            self.workload_table.resizeRowsToContents()
 
-        # Resize rows based on content (text wrapping)
-        self.workload_table.resizeRowsToContents()
 
     def filter_table(self):
         search_text = self.search_bar.text().lower()

@@ -71,7 +71,7 @@ class GenerateReportWindow(QWidget):
     def generate_html_timetable(self):
         """Generate and open the timetable as an HTML file."""
         semester = self.semester_combo.currentText()
-        
+
         if semester == "All Semesters":
             # Fetch timetable data for all semesters
             timetable_data = self.get_all_timetable_data()
@@ -109,7 +109,7 @@ class GenerateReportWindow(QWidget):
     def create_html_table(self, data, semester):
         """Generate the HTML table structure."""
         # Extract unique time slots and sort by time
-        time_slots = sorted(set((start, end) for _, _, _, _, _, start, end in data), 
+        time_slots = sorted(set((start, end) for _, _, _, _, _, start, end, _, _ in data), 
                             key=lambda x: datetime.strptime(x[0], "%I:%M %p"))
 
         # Get the current date in the desired format
@@ -181,7 +181,7 @@ class GenerateReportWindow(QWidget):
         """Fetch all timetable data for the selected semester."""
         query = """
             SELECT department, classroom, course_title, course_code, teacher, 
-                   lecture_start_time, lecture_end_time
+                   lecture_start_time, lecture_end_time, semester, session
             FROM Timetable 
             WHERE semester = ?
             ORDER BY department, classroom, lecture_start_time
@@ -189,15 +189,23 @@ class GenerateReportWindow(QWidget):
         return fetch_query_results(query, (semester,))
 
     def get_all_timetable_data(self):
-        """Fetch all timetable data for all semesters."""
-        query = """
-            SELECT department, classroom, course_title, course_code, teacher, 
-                   lecture_start_time, lecture_end_time
-            FROM Timetable 
-            ORDER BY semester, department, classroom, lecture_start_time
-        """
-        return fetch_query_results(query)
-
+     """
+    Fetch all timetable data for all semesters, 
+    ordered by session (morning first, then evening), 
+    semester, department, and classroom.
+    """
+     query = """
+        SELECT department, classroom, course_title, course_code, teacher, 
+               lecture_start_time, lecture_end_time, semester, session
+        FROM Timetable 
+        ORDER BY 
+            session ASC,                 -- Morning first (assumes 'Morning' < 'Evening')
+            semester ASC,                -- Sort by semester
+            department ASC,              -- Sort by department
+            classroom ASC,               -- Sort by classroom
+            lecture_start_time ASC       -- Sort by lecture start time
+    """
+     return fetch_query_results(query)
 def main():
     app = QApplication(sys.argv)
     window = GenerateReportWindow()
@@ -206,3 +214,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
