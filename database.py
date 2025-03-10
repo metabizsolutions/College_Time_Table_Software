@@ -4,6 +4,17 @@ def connect_db():
     """Connect to the SQLite database."""
     return sqlite3.connect("timetable.db")
 
+def execute_query(query, params=None):
+    """Execute an SQL query (INSERT, UPDATE, DELETE) on the database."""
+    conn = connect_db()
+    cursor = conn.cursor()
+    if params:
+        cursor.execute(query, params)
+    else:
+        cursor.execute(query)
+    conn.commit()
+    conn.close()
+
 def fetch_query_results(query, params=None):
     """Fetch data from the database."""
     conn = connect_db()
@@ -18,22 +29,14 @@ def fetch_query_results(query, params=None):
 
 def delete_record(record_id, table_name):
     """Delete a record from the specified table using the provided ID."""
-    conn = connect_db()
-    cursor = conn.cursor()
-    
-    # Construct the DELETE SQL query based on the table name
     query = f"DELETE FROM {table_name} WHERE id = ?"
-    
-    cursor.execute(query, (record_id,))
-    conn.commit()
-    conn.close()
+    execute_query(query, (record_id,))
 
 def update_record(table_name, record_id, updated_data):
     """Update a record in the specified table."""
     conn = connect_db()
     cursor = conn.cursor()
 
-    # Construct the UPDATE SQL query based on the table name
     if table_name == "Classrooms":
         cursor.execute("""
             UPDATE Classrooms
@@ -128,7 +131,7 @@ def create_database(db_name):
         lecture_start_time TEXT,  -- Start time of the lecture
         lecture_end_time TEXT,    -- End time of the lecture
         session TEXT,             -- Session (Morning/Evening)
-        lecture_duration INTEGER -- Duration of the lecture in minutes
+        lecture_duration INTEGER  -- Duration of the lecture in minutes
     )
     """)
 
@@ -136,16 +139,17 @@ def create_database(db_name):
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS LabWork (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        department TEXT NOT NULL,       -- Department name (e.g., BS Computer Science)
-        semester TEXT NOT NULL,         -- Semester number (e.g., 1, 2, 3)
-        session TEXT NOT NULL,          -- Session (Morning or Evening)
-        subject_name TEXT NOT NULL,     -- Name of the subject
-        teacher_name TEXT NOT NULL,     -- Name of the teacher
-        day TEXT NOT NULL,              -- Day of the week (e.g., Monday, Tuesday)
-        start_time TEXT NOT NULL,       -- Start time of the lab (e.g., 10:00 AM)
-        end_time TEXT NOT NULL          -- End time of the lab (e.g., 12:00 PM)
+        department TEXT NOT NULL,
+        semester TEXT NOT NULL,
+        session TEXT NOT NULL,
+        subject_name TEXT NOT NULL,
+        teacher_name TEXT NOT NULL,
+        day TEXT NOT NULL,
+        start_time TEXT NOT NULL,
+        end_time TEXT NOT NULL
     )
-""")
+    """)
+
     # Check if the lecture_duration column exists, and add it if it doesn't
     cursor.execute("PRAGMA table_info(Timetable)")
     columns = cursor.fetchall()
@@ -156,22 +160,6 @@ def create_database(db_name):
     conn.commit()
     conn.close()
 
-def execute_query(query, params=None):
-    """Execute a SQL query (INSERT, UPDATE, DELETE)."""
-    conn = connect_db()
-    cursor = conn.cursor()
-    try:
-        if params:
-            cursor.execute(query, params)
-        else:
-            cursor.execute(query)
-        conn.commit()  # Commit changes for INSERT, UPDATE, DELETE
-    except sqlite3.Error as e:
-        print(f"An error occurred: {e}")
-    finally:
-        conn.close()
-
-# Add other necessary functions as needed...
 if __name__ == "__main__":
     # Call the function to create the database and tables if they don't exist
     create_database("timetable.db")
