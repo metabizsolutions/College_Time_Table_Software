@@ -6,12 +6,12 @@ from PyQt5.QtWidgets import (
     QPushButton, QMessageBox, QDesktopWidget
 )
 from PyQt5.QtCore import Qt
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # Simulated database query function
 def fetch_query_results(query, params=()):
-    """Simulates fetching results from a database."""
-    connection = sqlite3.connect("timetable.db")  # Replace with your database file
+    """Fetch results from the SQLite database."""
+    connection = sqlite3.connect("timetable.db")  # Connect to the database
     cursor = connection.cursor()
     cursor.execute(query, params)
     results = cursor.fetchall()
@@ -36,12 +36,12 @@ class GenerateReportWindow(QWidget):
         title_label.setStyleSheet("font-size: 24px; font-weight: bold; margin-bottom: 20px;")
         self.main_layout.addWidget(title_label)
 
-        # Create a form layout for semester selection
+        # Create a form layout for department selection
         self.form_layout = QFormLayout()
-        self.semester_label = QLabel("Select Semester:")
-        self.semester_combo = QComboBox()
-        self.semester_combo.addItems(["All Semesters"] + self.get_semesters())  # Add "All Semesters"
-        self.form_layout.addRow(self.semester_label, self.semester_combo)
+        self.department_label = QLabel("Select Department:")
+        self.department_combo = QComboBox()
+        self.department_combo.addItems(["All Departments"] + self.get_departments())  # Add "All Departments"
+        self.form_layout.addRow(self.department_label, self.department_combo)
 
         # Add form layout to the main layout
         self.main_layout.addLayout(self.form_layout)
@@ -62,40 +62,33 @@ class GenerateReportWindow(QWidget):
         qr.moveCenter(cp)
         self.move(qr.topLeft())
 
-    def get_semesters(self):
-        """Fetch distinct semesters from the Timetable table."""
-        query = "SELECT DISTINCT semester FROM Timetable"
-        semesters = fetch_query_results(query)
-        return [semester[0] for semester in semesters]
+    def get_departments(self):
+        """Fetch distinct departments from the Programs table."""
+        query = "SELECT DISTINCT program_name FROM Programs"
+        departments = fetch_query_results(query)
+        return [department[0] for department in departments]
 
     def generate_html_timetable(self):
         """Generate and open the timetable as an HTML file."""
-        semester = self.semester_combo.currentText()
+        department = self.department_combo.currentText()
 
-        if semester == "All Semesters":
-            # Fetch timetable data for all semesters
+        if department == "All Departments":
+            # Fetch timetable data for all departments
             timetable_data = self.get_all_timetable_data()
-
-            if not timetable_data:
-                QMessageBox.warning(self, "No Data", "No data found for any semester.")
-                return
-
-            # Generate the HTML content for all semesters
-            html_content = self.create_html_table(timetable_data, semester="All Semesters")
         else:
-            if not semester:
-                QMessageBox.warning(self, "Input Error", "Please select a semester.")
+            if not department:
+                QMessageBox.warning(self, "Input Error", "Please select a department.")
                 return
 
-            # Fetch timetable data for the selected semester
-            timetable_data = self.get_departments_classrooms_and_courses_for_semester(semester)
+            # Fetch timetable data for the selected department
+            timetable_data = self.get_timetable_data_for_department(department)
 
-            if not timetable_data:
-                QMessageBox.warning(self, "No Data", "No data found for the selected semester.")
-                return
+        if not timetable_data:
+            QMessageBox.warning(self, "No Data", "No data found for the selected department.")
+            return
 
-            # Generate the HTML content for the selected semester
-            html_content = self.create_html_table(timetable_data, semester)
+        # Generate the HTML content for the selected department
+        html_content = self.create_html_table(timetable_data, department)
 
         # Save the HTML file
         file_name = "timetable.html"
@@ -106,11 +99,10 @@ class GenerateReportWindow(QWidget):
         webbrowser.open(file_name)
         QMessageBox.information(self, "Success", "Timetable generated and opened in your browser.")
 
-    def create_html_table(self, data, semester):
+    def create_html_table(self, data, department):
         """Generate the HTML table structure with pagination (5 departments per page) and session-wise grouping."""
         # Extract unique time slots and sort by time
-        time_slots = sorted(set((start, end) for _, _, _, _, _, start, end, _, _ in data), 
-                        key=lambda x: datetime.strptime(x[0], "%I:%M %p"))
+        time_slots = self.generate_time_slots(data)  # Generate 8 time slots dynamically
 
         # Get the current date in the desired format
         current_date = datetime.now().strftime("%d-%m-%Y")
@@ -126,7 +118,7 @@ class GenerateReportWindow(QWidget):
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Timetable for {semester}</title>
+            <title>Timetable for {department}</title>
             <style>
                 body {{ font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }}
                 table {{ border-collapse: collapse; width: 100%; margin-bottom: 20px; }}
@@ -148,7 +140,7 @@ class GenerateReportWindow(QWidget):
 
             # Group data by semester within the session
             semesters = set(row[7] for row in session_data)  # Get unique semesters
-            semesters = sorted(semesters)  # Sort semesters
+            semesters = sorted(semesters)  # Sort semesters in ascending order
 
             # Generate tables for each semester in the current session
             for sem in semesters:
@@ -165,7 +157,7 @@ class GenerateReportWindow(QWidget):
 
                 # Add header for the semester and session
                 html += f"""
-                <h2>Timetable for {sem} ({session})</h2>
+                <h2>Timetable for {department} - Semester {sem} ({session})</h2>
                 <h4>Government Graduate College Muzaffargarh</h4>
                 """
 
@@ -180,15 +172,15 @@ class GenerateReportWindow(QWidget):
                     html += "</tr></thead><tbody>"
 
                     # Populate rows for each department and classroom in the chunk
-                    for department, classroom in chunk:
-                        html += f"<tr><td>{department}</td><td>{classroom}</td>"
+                    for department_name, classroom in chunk:
+                        html += f"<tr><td>{department_name}</td><td>{classroom}</td>"
 
                         # Add lecture details for each time slot
                         for start, end in time_slots:
                             # Find all lectures for this department, classroom, and time slot
                             lectures = [
                                 row for row in semester_data
-                                if row[0] == department and row[1] == classroom and row[5] == start and row[6] == end
+                                if row[0] == department_name and row[1] == classroom and row[5] == start and row[6] == end
                             ]
                             if lectures:
                                 # Combine all lectures into a single cell
@@ -198,6 +190,7 @@ class GenerateReportWindow(QWidget):
                                 )
                                 html += f"<td>{lecture_details}</td>"
                             else:
+                                # If no lecture, leave the cell empty
                                 html += "<td></td>"
                         html += "</tr>"
 
@@ -231,26 +224,57 @@ class GenerateReportWindow(QWidget):
         """
         return html
 
-    def get_departments_classrooms_and_courses_for_semester(self, semester):
-        """Fetch all timetable data for the selected semester."""
+    def generate_time_slots(self, data):
+        """Generate 8 time slots based on the starting time and lecture duration."""
+        # Fetch the starting time and lecture duration from the first record
+        if not data:
+            return []
+
+        start_time_str = data[0][5]  # Fetch starting time from the first record
+        lecture_duration = data[0][9]  # Fetch lecture duration from the first record
+
+        # Handle cases where lecture_duration is None
+        if lecture_duration is None:
+            lecture_duration = 50  # Default duration in minutes (you can change this as needed)
+
+        # Convert start time to a datetime object
+        try:
+            start_time = datetime.strptime(start_time_str, "%I:%M %p")
+        except ValueError:
+            # Handle invalid time format
+            start_time = datetime.strptime("08:00 AM", "%I:%M %p")  # Default start time
+
+        # Generate 8 time slots
+        time_slots = []
+        for i in range(8):
+            end_time = start_time + timedelta(minutes=lecture_duration)
+            time_slots.append((
+                start_time.strftime("%I:%M %p"),  # Format as 12-hour time with AM/PM
+                end_time.strftime("%I:%M %p")
+            ))
+            start_time = end_time  # Move to the next slot
+
+        return time_slots
+
+    def get_timetable_data_for_department(self, department):
+        """Fetch all timetable data for the selected department."""
         query = """
             SELECT department, classroom, course_title, course_code, teacher, 
-                   lecture_start_time, lecture_end_time, semester, session
+                   lecture_start_time, lecture_end_time, semester, session, lecture_duration
             FROM Timetable 
-            WHERE semester = ?
-            ORDER BY department, classroom, lecture_start_time
+            WHERE department = ?
+            ORDER BY session, classroom, lecture_start_time
         """
-        return fetch_query_results(query, (semester,))
+        return fetch_query_results(query, (department,))
 
     def get_all_timetable_data(self):
-        """Fetch all timetable data for all semesters."""
+        """Fetch all timetable data for all departments."""
         query = """
             SELECT department, classroom, course_title, course_code, teacher, 
-                   lecture_start_time, lecture_end_time, semester, session
+                   lecture_start_time, lecture_end_time, semester, session, lecture_duration
             FROM Timetable 
             ORDER BY 
                 session ASC,                 -- Morning first (assumes 'Morning' < 'Evening')
-                semester ASC,                -- Sort by semester
                 department ASC,              -- Sort by department
                 classroom ASC,               -- Sort by classroom
                 lecture_start_time ASC       -- Sort by lecture start time

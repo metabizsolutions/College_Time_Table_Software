@@ -115,7 +115,7 @@ def create_database(db_name):
     )
     """)
 
-    # Updated Timetable table creation
+    # Updated Timetable table creation with lecture_duration column
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS Timetable (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -125,14 +125,20 @@ def create_database(db_name):
         course_title TEXT,
         course_code TEXT,
         classroom TEXT,
-        lecture_start_time TEXT,  -- New start time column
-        lecture_end_time TEXT,    -- New end time column
-        session TEXT
+        lecture_start_time TEXT,  -- Start time of the lecture
+        lecture_end_time TEXT,    -- End time of the lecture
+        session TEXT,             -- Session (Morning/Evening)
+        lecture_duration INTEGER -- Duration of the lecture in minutes
     )
     """)
 
+    # Check if the lecture_duration column exists, and add it if it doesn't
+    cursor.execute("PRAGMA table_info(Timetable)")
+    columns = cursor.fetchall()
+    column_names = [column[1] for column in columns]  # Extract column names
+    if "lecture_duration" not in column_names:
+        cursor.execute("ALTER TABLE Timetable ADD COLUMN lecture_duration INTEGER")
 
-    
     conn.commit()
     conn.close()
 
