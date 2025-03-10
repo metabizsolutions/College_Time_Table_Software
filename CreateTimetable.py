@@ -1,5 +1,6 @@
 import sys
 import sqlite3
+import subprocess  # Import subprocess to run external scripts
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, 
     QMessageBox, QListWidget, QComboBox, QTimeEdit, QFormLayout, QGroupBox, QScrollArea
@@ -58,6 +59,11 @@ class CreateTimetableWindow(QWidget):
         self.submit_button = QPushButton("Submit")
         self.submit_button.clicked.connect(self.submit_data)
         self.layout.addWidget(self.submit_button)
+
+        # Add Lab Work button
+        self.lab_work_button = QPushButton("Lab Work")
+        self.lab_work_button.clicked.connect(self.open_lab_work)
+        self.layout.addWidget(self.lab_work_button)
 
         self.showMaximized()
 
@@ -264,6 +270,15 @@ class CreateTimetableWindow(QWidget):
         """
         self.cursor.execute(query, (teacher, end_time, start_time, start_time, end_time))
         return bool(self.cursor.fetchall())
+
+    def open_lab_work(self):
+        """Open the lab.py file when the Lab Work button is clicked."""
+        try:
+            subprocess.run(["python", "lab.py"], check=True)
+        except subprocess.CalledProcessError as e:
+            QMessageBox.critical(self, "Error", f"Failed to open lab.py: {e}")
+        except FileNotFoundError:
+            QMessageBox.critical(self, "Error", "The file lab.py was not found.")
 
 def main():
     app = QApplication(sys.argv)

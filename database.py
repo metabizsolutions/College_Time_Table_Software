@@ -132,6 +132,20 @@ def create_database(db_name):
     )
     """)
 
+    # Create LabWork table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS LabWork (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        department TEXT NOT NULL,       -- Department name (e.g., BS Computer Science)
+        semester TEXT NOT NULL,         -- Semester number (e.g., 1, 2, 3)
+        session TEXT NOT NULL,          -- Session (Morning or Evening)
+        subject_name TEXT NOT NULL,     -- Name of the subject
+        teacher_name TEXT NOT NULL,     -- Name of the teacher
+        day TEXT NOT NULL,              -- Day of the week (e.g., Monday, Tuesday)
+        start_time TEXT NOT NULL,       -- Start time of the lab (e.g., 10:00 AM)
+        end_time TEXT NOT NULL          -- End time of the lab (e.g., 12:00 PM)
+    )
+""")
     # Check if the lecture_duration column exists, and add it if it doesn't
     cursor.execute("PRAGMA table_info(Timetable)")
     columns = cursor.fetchall()
