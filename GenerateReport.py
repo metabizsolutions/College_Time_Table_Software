@@ -107,13 +107,17 @@ class GenerateReportWindow(QWidget):
         QMessageBox.information(self, "Success", "Timetable generated and opened in your browser.")
 
     def create_html_table(self, data, semester):
-        """Generate the HTML table structure."""
+        """Generate the HTML table structure with pagination (5 departments per page) and session-wise grouping."""
         # Extract unique time slots and sort by time
         time_slots = sorted(set((start, end) for _, _, _, _, _, start, end, _, _ in data), 
-                            key=lambda x: datetime.strptime(x[0], "%I:%M %p"))
+                        key=lambda x: datetime.strptime(x[0], "%I:%M %p"))
 
         # Get the current date in the desired format
         current_date = datetime.now().strftime("%d-%m-%Y")
+
+        # Group data by session (morning first, then evening)
+        sessions = set(row[8] for row in data)  # Get unique sessions
+        sessions = sorted(sessions, key=lambda x: 0 if x == "Morning" else 1)  # Morning first
 
         # Start HTML structure
         html = f"""
@@ -131,47 +135,97 @@ class GenerateReportWindow(QWidget):
                 h2, h4 {{ text-align: center; margin-bottom: 20px; }}
                 .footer-text {{ text-align: center; margin-top: 30px; font-size: 14px; }}
                 .footer-text p {{ margin: 5px; }}
+                .page-break {{ page-break-after: always; }} /* Add page break after each table */
             </style>
         </head>
         <body>
-            <h2>Timetable for {semester}</h2>
-            <h4>Government Graduate College Muzaffargarh</h4>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Department</th>
-                        <th>Classroom</th>
         """
-        # Add time slots as headers
-        for start, end in time_slots:
-            html += f"<th>{start} - {end}</th>"
-        html += "</tr></thead><tbody>"
 
-        # Populate rows for each department and classroom
-        for department, classroom in set((row[0], row[1]) for row in data):
-            html += f"<tr><td>{department}</td><td>{classroom}</td>"
+        # Generate tables for each session (morning first, then evening)
+        for session in sessions:
+            # Filter data for the current session
+            session_data = [row for row in data if row[8] == session]
 
-            # Add lecture details for each time slot
-            for start, end in time_slots:
-                lecture = next(
-                    (row for row in data if row[0] == department and row[1] == classroom and row[5] == start and row[6] == end),
-                    None
-                )
-                if lecture:
-                    html += f"<td>{lecture[2]} ({lecture[3]})<br>{lecture[4]}</td>"
-                else:
-                    html += "<td></td>"
-            html += "</tr>"
+            # Group data by semester within the session
+            semesters = set(row[7] for row in session_data)  # Get unique semesters
+            semesters = sorted(semesters)  # Sort semesters
 
-        # Close table and add footer
-        html += f"""
-                </tbody>
-            </table>
-            <div class="footer-text">
-                <p>Generated on ({current_date})</p>
-                <p>Prof. Muhammad Adnan Saeed - Incharge College Timetable</p>
-                <p>Prof. Dr. Rahmat Ullah - Principal</p>
-            </div>
+            # Generate tables for each semester in the current session
+            for sem in semesters:
+                # Filter data for the current semester and session
+                semester_data = [row for row in session_data if row[7] == sem]
+
+                # Group data by department and classroom
+                departments = set((row[0], row[1]) for row in semester_data)
+                departments = sorted(departments, key=lambda x: x[0])  # Sort by department name
+
+                # Split departments into chunks of 5 per page
+                chunk_size = 5
+                department_chunks = [departments[i:i + chunk_size] for i in range(0, len(departments), chunk_size)]
+
+                # Add header for the semester and session
+                html += f"""
+                <h2>Timetable for {sem} ({session})</h2>
+                <h4>Government Graduate College Muzaffargarh</h4>
+                """
+
+                # Generate a table for each chunk of departments
+                for chunk_index, chunk in enumerate(department_chunks):
+                    # Start table
+                    html += "<table>"
+                    html += "<thead><tr><th>Department</th><th>Classroom</th>"
+                    # Add time slots as headers
+                    for start, end in time_slots:
+                        html += f"<th>{start} - {end}</th>"
+                    html += "</tr></thead><tbody>"
+
+                    # Populate rows for each department and classroom in the chunk
+                    for department, classroom in chunk:
+                        html += f"<tr><td>{department}</td><td>{classroom}</td>"
+
+                        # Add lecture details for each time slot
+                        for start, end in time_slots:
+                            # Find all lectures for this department, classroom, and time slot
+                            lectures = [
+                                row for row in semester_data
+                                if row[0] == department and row[1] == classroom and row[5] == start and row[6] == end
+                            ]
+                            if lectures:
+                                # Combine all lectures into a single cell
+                                lecture_details = "<br>".join(
+                                    f"{lecture[2]} ({lecture[3]}) - {lecture[4]}"
+                                    for lecture in lectures
+                                )
+                                html += f"<td>{lecture_details}</td>"
+                            else:
+                                html += "<td></td>"
+                        html += "</tr>"
+
+                    html += "</tbody></table>"
+
+                    # Add footer for each page
+                    html += f"""
+                    <div class="footer-text">
+                        <p>Generated on ({current_date})</p>
+                        <p>Prof. Muhammad Adnan Saeed - Incharge College Timetable</p>
+                        <p>Prof. Dr. Rahmat Ullah - Principal</p>
+                    </div>
+                    """
+
+                    # Add a page break after each table (except the last one for the semester)
+                    if chunk_index < len(department_chunks) - 1:
+                        html += '<div class="page-break"></div>'
+
+                # Add a page break after each semester (except the last one in the session)
+                if sem != semesters[-1]:
+                    html += '<div class="page-break"></div>'
+
+            # Add a page break after each session (except the last one)
+            if session != sessions[-1]:
+                html += '<div class="page-break"></div>'
+
+        # Close HTML structure
+        html += """
         </body>
         </html>
         """
@@ -189,23 +243,20 @@ class GenerateReportWindow(QWidget):
         return fetch_query_results(query, (semester,))
 
     def get_all_timetable_data(self):
-     """
-    Fetch all timetable data for all semesters, 
-    ordered by session (morning first, then evening), 
-    semester, department, and classroom.
-    """
-     query = """
-        SELECT department, classroom, course_title, course_code, teacher, 
-               lecture_start_time, lecture_end_time, semester, session
-        FROM Timetable 
-        ORDER BY 
-            session ASC,                 -- Morning first (assumes 'Morning' < 'Evening')
-            semester ASC,                -- Sort by semester
-            department ASC,              -- Sort by department
-            classroom ASC,               -- Sort by classroom
-            lecture_start_time ASC       -- Sort by lecture start time
-    """
-     return fetch_query_results(query)
+        """Fetch all timetable data for all semesters."""
+        query = """
+            SELECT department, classroom, course_title, course_code, teacher, 
+                   lecture_start_time, lecture_end_time, semester, session
+            FROM Timetable 
+            ORDER BY 
+                session ASC,                 -- Morning first (assumes 'Morning' < 'Evening')
+                semester ASC,                -- Sort by semester
+                department ASC,              -- Sort by department
+                classroom ASC,               -- Sort by classroom
+                lecture_start_time ASC       -- Sort by lecture start time
+        """
+        return fetch_query_results(query)
+
 def main():
     app = QApplication(sys.argv)
     window = GenerateReportWindow()
@@ -214,5 +265,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-

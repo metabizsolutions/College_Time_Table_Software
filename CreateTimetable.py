@@ -123,7 +123,6 @@ class CreateTimetableWindow(QWidget):
 
         self.form_layout.addRow(time_layout)
 
-
     def add_session_section(self):
         session_layout = QHBoxLayout()
         
@@ -176,30 +175,17 @@ class CreateTimetableWindow(QWidget):
         for row in rows:
             list_widget.addItem(row[0])
 
-
-    def get_query_column(self, label):
-        """ Map label to correct database column name """
-        column_map = {
-            "Department": "program_name",
-            "Semester": "semester",
-            "Teacher": "teacher_name",
-            "Course Title": "course_name",
-            "Course Code": "course_code",
-            "Classroom": "classroom_name"
-        }
-        return column_map.get(label)
-
     def select_item(self, input_field, list_widget, item):
         input_field.setText(item.text())
         list_widget.clear()
+
     def is_course_unique(self, course_title, course_code, department, semester):
         query = """
         SELECT * FROM Timetable 
         WHERE course_title = ? AND course_code = ? AND department = ? AND semester = ?
         """
         self.cursor.execute(query, (course_title, course_code, department, semester))
-        return bool(self.cursor.fetchall())
-
+        return not bool(self.cursor.fetchall())  # Return True if the course is unique
 
     def submit_data(self):
         department = self.department_input.text()
@@ -212,27 +198,21 @@ class CreateTimetableWindow(QWidget):
         start_time = self.start_time_input.time().toString('hh:mm AP')  # 12-hour format with AM/PM
         end_time = self.end_time_input.time().toString('hh:mm AP')  # 12-hour format with AM/PM
 
-
         session = self.session_combo.currentText()
 
         if not department or not semester or not teacher or not course_title or not course_code or not classroom:
             QMessageBox.warning(self, "Input Error", "Please fill in all the fields.")
             return
 
-        if start_time <= end_time:
-            QMessageBox.warning(self, "Time Error", "End time must be later than start time.")
-            return
-
-
         if self.is_teacher_scheduled(teacher, start_time, end_time):
             QMessageBox.warning(self, "Schedule Conflict", f"This teacher is already scheduled during this time.")
             return
 
-        if self.is_classroom_assigned(classroom, start_time, end_time):
-            QMessageBox.warning(self, "Classroom Conflict", f"This classroom is already assigned during this time.")
-            return
+        # if self.is_classroom_assigned(classroom, start_time, end_time):
+        #     QMessageBox.warning(self, "Classroom Conflict", f"This classroom is already assigned during this time.")
+        #     return
 
-        if self.is_course_unique(course_title, course_code, department, semester):
+        if not self.is_course_unique(course_title, course_code, department, semester):
             QMessageBox.warning(self, "Course Conflict", f"This course title and code already exist for the selected department and semester.")
             return
 
@@ -247,8 +227,6 @@ class CreateTimetableWindow(QWidget):
             self.clear_inputs()
         except Exception as e:
             QMessageBox.critical(self, "Database Error", f"An error occurred: {e}")
-
-
 
     def clear_inputs(self):
         self.department_input.clear()
@@ -271,23 +249,15 @@ class CreateTimetableWindow(QWidget):
         self.cursor.execute(query, (teacher, end_time, start_time, start_time, end_time))
         return bool(self.cursor.fetchall())
 
-    def is_classroom_assigned(self, classroom, start_time, end_time):
-        query = """
-        SELECT * FROM Timetable 
-        WHERE classroom = ? AND 
-              ((lecture_start_time < ? AND lecture_end_time > ?) OR 
-               (lecture_start_time < ? AND lecture_end_time > ?))
-        """
-        self.cursor.execute(query, (classroom, end_time, start_time, start_time, end_time))
-        return bool(self.cursor.fetchall())
-
-    def is_course_unique(self, course_title, course_code, semester):
-        query = """
-        SELECT * FROM Timetable 
-        WHERE course_title = ? AND course_code = ? AND semester = ?
-        """
-        self.cursor.execute(query, (course_title, course_code, semester))
-        return bool(self.cursor.fetchall())
+    # def is_classroom_assigned(self, classroom, start_time, end_time):
+    #     query = """
+    #     SELECT * FROM Timetable 
+    #     WHERE classroom = ? AND 
+    #           ((lecture_start_time < ? AND lecture_end_time > ?) OR 
+    #            (lecture_start_time < ? AND lecture_end_time > ?))
+    #     """
+    #     self.cursor.execute(query, (classroom, end_time, start_time, start_time, end_time))
+    #     return bool(self.cursor.fetchall())
 
 def main():
     app = QApplication(sys.argv)
